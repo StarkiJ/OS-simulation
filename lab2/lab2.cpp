@@ -11,15 +11,35 @@ using namespace std;
 #define read 0b0
 #define write 0b1
 
-// é¡µè¡¨é¡¹
+// ²Ù×÷
+class Operation
+{
+public:
+    int logicalAddress; // Âß¼­µØÖ·
+    int op;             // ²Ù×÷
+
+    Operation()
+    {
+        logicalAddress = -1;
+        op = -1;
+    }
+
+    void print()
+    {
+        cout << left << "|" << setw(10) << logicalAddress
+             << "|" << setw(10) << (op == read ? "read" : "write") << endl;
+    }
+};
+
+// Ò³±íÏî
 class PageTableItem
 {
 public:
-    int address;     // å¤–å­˜åœ°å€
-    int frameNumber; // ç‰©ç†å—å·
-    int access;      // è®¿é—®å­—æ®µ
-    bool valid;      // æœ‰æ•ˆä½
-    bool dirty;      // è„ä½
+    int address;     // Íâ´æµØÖ·
+    int frameNumber; // ÎïÀí¿éºÅ
+    int access;      // ·ÃÎÊ×Ö¶Î
+    bool valid;      // ÓĞĞ§Î»
+    bool dirty;      // ÔàÎ»
 
     PageTableItem()
     {
@@ -38,7 +58,7 @@ public:
         dirty = false;
     }
 
-    void update(Operation op, int i) // æ›´æ–°é¡µè¡¨é¡¹
+    void update(Operation op, int i) // ¸üĞÂÒ³±íÏî
     {
         valid = true;
         access = i;
@@ -49,32 +69,56 @@ public:
     }
 };
 
-class Operation
+// ¶ÁÈ¡´æ´¢µÄ¼Æ»®
+bool readFile(vector<Operation> &operations)
 {
-public:
-    int logicalAddress; // é€»è¾‘åœ°å€
-    int op;             // æ“ä½œ
+    ifstream ifs;
+    ifs.open("lab2.txt", ios::in);
 
-    Operation()
+    // ÎÄ¼ş²»´æÔÚÔò·µ»Ø
+    if (!ifs)
     {
-        logicalAddress = -1;
-        op = -1;
+        cout << "ÎÄ¼ş²»´æÔÚ" << endl;
+        return 0;
     }
-};
 
-// å»ºç«‹é¡µè¡¨
+    // ¿ÕÎÄ¼şÔò·µ»Ø
+    if (ifs.peek() == ifstream::traits_type::eof())
+    {
+        cout << "Ã»ÓĞ²Ù×÷ĞÅÏ¢" << endl;
+        return 0;
+    }
+
+    cout << "¶ÁÈ¡²Ù×÷ĞÅÏ¢" << endl;
+    cout << left << "|" << setw(10) << "Âß¼­µØÖ·"
+         << "|" << setw(10) << "²Ù×÷ÀàĞÍ" << endl;
+
+    // ¶ÁÈ¡½ø³ÌĞÅÏ¢
+    while (!ifs.eof())
+    {
+        Operation op;
+        ifs >> op.logicalAddress >> op.op;
+        op.print();
+        operations.push_back(op);
+    }
+
+    ifs.close();
+    return 1;
+}
+
+// ½¨Á¢Ò³±í
 void createPageTable(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable)
 {
     int len = externalMemory.size();
     for (int i = 0; i < len; i++)
     {
         PageTableItem item;
-        item.address = i; // å¤–å­˜åœ°å€
+        item.address = i; // Íâ´æµØÖ·
         pageTable.push_back(item);
     }
 }
 
-// åˆå§‹åŒ–é¡µè¡¨
+// ³õÊ¼»¯Ò³±í
 void initPageTable(vector<PageTableItem> &pageTable)
 {
     int len = pageTable.size();
@@ -84,62 +128,104 @@ void initPageTable(vector<PageTableItem> &pageTable)
     }
 }
 
-// å…ˆè¿›å…ˆå‡º
-void FIFO(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable, vector<Operation> &operations)
+// ÏÔÊ¾ÎïÀíÒ³
+void showPhyicalPage(vector<PageTableItem> &PageTable, int phyNum)
 {
-    initPageTable(pageTable); // åˆå§‹åŒ–é¡µè¡¨
+    int len = PageTable.size();
 
-    vector<vector<int>> physicalPage; // ç‰©ç†é¡µ4x5
+    for (int j = 0; j < phyNum; j++)
+    {
+        for (int i = 0; i < len; i++)
+        {
+            if (PageTable[i].valid && PageTable[i].frameNumber == j)
+            {
+                cout << PageTable[i].frameNumber << " " << i << endl;
+                break;
+            }
+        }
+    }
+}
 
-    int pageNum = 4;                       // ç‰©ç†é¡µæ•°
-    int pageSize = physicalPage[0].size(); // é¡µå¤§å°
-    int ptlen = pageTable.size();          // é¡µè¡¨é•¿åº¦
-    int oplen = operations.size();         // æ“ä½œæ•°
+// ÏÈ½øÏÈ³öFIFO
+void firstInFirstOut(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable, vector<Operation> &operations, int phyNum)
+{
+    cout << "ÏÈ½øÏÈ³öËã·¨¿ªÊ¼" << endl;
 
-    for (int i = 0; i < oplen; i++) // éå†æ“ä½œ
+    initPageTable(pageTable); // ³õÊ¼»¯Ò³±í
+
+    vector<vector<int>> physicalPage; // ÎïÀíÒ³4x8
+
+    int pageSize = externalMemory[0].size(); // Ò³´óĞ¡
+    int ptlen = pageTable.size();            // Ò³±í³¤¶È
+    int oplen = operations.size();           // ²Ù×÷Êı
+
+    for (int i = 0; i < oplen; i++) // ±éÀú²Ù×÷
     {
         Operation op = operations[i];
-        int pageNum = op.logicalAddress / pageSize; // é¡µå·
-        int offset = op.logicalAddress % pageSize;  // é¡µå†…åç§»
+        int pageNum = op.logicalAddress / pageSize; // Ò³ºÅ
+        int offset = op.logicalAddress % pageSize;  // Ò³ÄÚÆ«ÒÆ
+
+        cout << "²Ù×÷£º" << op.logicalAddress << " " << op.op << endl;
+        cout << "Ò³ºÅ£º" << pageNum << " Æ«ÒÆ£º" << offset << endl;
+
         if (pageNum < ptlen)
         {
-            PageTableItem item = pageTable[pageNum];
+            PageTableItem item = pageTable[pageNum]; // ¶ÔÓ¦µÄÒ³±íÏî
 
-            if (!item.valid) // ä¸åœ¨å†…å­˜ä¸­
+            if (!item.valid) // ²»ÔÚÄÚ´æÖĞ
             {
-                if (physicalPage.size() < pageNum) // ç‰©ç†é¡µæ²¡è£…æ»¡
+                cout << "È±Ò³£º²»ÔÚÄÚ´æÖĞ" << endl;
+
+                if (physicalPage.size() < phyNum) // ÎïÀíÒ³Ã»×°Âú
                 {
                     physicalPage.push_back(externalMemory[item.address]);
                     item.frameNumber = physicalPage.size() - 1;
                 }
-                else // ç‰©ç†é¡µå·²è£…æ»¡
+                else // ÎïÀíÒ³ÒÑ×°Âú
                 {
-                    int replaced = 0;
-                    for (int j = 0; j < ptlen; j++) // æ‰¾åˆ°æœ€è¿‘æœ€ä¹…æœªä½¿ç”¨çš„é¡µ
+                    int replaced = -1;              // Ä¬ÈÏÎª¸º
+                    for (int j = 0; j < ptlen; j++) // ÕÒµ½×î½ü×î¾ÃÎ´Ê¹ÓÃµÄÒ³
                     {
-                        if ((pageTable[j].access < pageTable[replaced].access) && (pageTable[j].valid))
+                        if (pageTable[j].valid) // ÕÒµ½ÕıÔÚÊ¹ÓÃÎïÀíÒ³µÄÒ³±íÏî
                         {
-                            replaced = j;
+                            if (replaced == -1) // µÚÒ»´ÎÕÒµ½
+                            {
+                                replaced = j;
+                            }
+                            else if (pageTable[j].access < pageTable[replaced].access) // ÕÒµ½¸ü¾ÃÎ´Ê¹ÓÃµÄÒ³
+                            {
+                                replaced = j;
+                            }
                         }
                     }
-                    int framNum = pageTable[replaced].frameNumber; // è¢«æ›¿æ¢çš„ç‰©ç†å—å·
+                    int framNum = pageTable[replaced].frameNumber; // ±»Ìæ»»µÄÎïÀí¿éºÅ
 
-                    pageTable[replaced].valid = false; // æ— æ•ˆåŒ–é¡µè¡¨é¡¹
-                    if (pageTable[replaced].dirty)     // å¦‚æœæœ‰è¿‡ä¿®æ”¹åˆ™éœ€è¦å†™å›
+                    pageTable[replaced].valid = false; // ÎŞĞ§»¯Ò³±íÏî
+                    if (pageTable[replaced].dirty)     // Èç¹ûÓĞ¹ıĞŞ¸ÄÔòĞèÒªĞ´»Ø
                     {
                         externalMemory[pageTable[replaced].address] = physicalPage[framNum];
                         pageTable[replaced].dirty = false;
+
+                        cout << "Ğ´»Ø£º" << framNum << " " << pageTable[replaced].address << endl;
                     }
-                    physicalPage[framNum] = externalMemory[item.address]; // æ›´æ–°ç‰©ç†å—
-                    item.frameNumber = framNum;                           // æ›´æ–°é¡µè¡¨å¯¹åº”çš„ç‰©ç†å—å·
+
+                    physicalPage[framNum] = externalMemory[item.address]; // ¸üĞÂÎïÀí¿é
+                    item.frameNumber = framNum;                           // ¸üĞÂÒ³±í¶ÔÓ¦µÄÎïÀí¿éºÅ
                 }
             }
+            else
+            {
+                cout << "ÃüÖĞ£ºÔÚÄÚ´æÖĞ" << endl;
+            }
 
-            item.update(op, i); // æ›´æ–°é¡µè¡¨
+            item.update(op, i); // ¸üĞÂÒ³±í
+            pageTable[pageNum] = item;
+
+            showPhyicalPage(pageTable, phyNum);
         }
         else
         {
-            cout << operations[i].logicalAddress << " é¡µå· > é¡µè¡¨é•¿åº¦ï¼Œè¶Šç•Œä¸­æ–­ï¼!!" << endl;
+            cout << operations[i].logicalAddress << " Ò³ºÅ > Ò³±í³¤¶È£¬Ô½½çÖĞ¶Ï£¡!!" << endl;
             return;
         }
     }
@@ -147,19 +233,70 @@ void FIFO(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable,
 
 int main()
 {
-    vector<Operation> operations; // æ“ä½œåºåˆ—
-    vector<vector<int>> externalMemory = {{0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4},
-                                          {0, 1, 2, 3, 4}}; // å¤–å­˜9x5
-    vector<PageTableItem> pageTable;                        // é¡µè¡¨
+    vector<Operation> operations; // ²Ù×÷ĞòÁĞ
+    vector<vector<int>> externalMemory = {{0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7},
+                                          {0, 1, 2, 3, 4, 5, 6, 7}}; // Íâ´æ10x8
+    vector<PageTableItem> pageTable;                                 // Ò³±í
 
-    // å»ºç«‹é¡µè¡¨
+    // ½¨Á¢Ò³±í
     createPageTable(externalMemory, pageTable);
+
+    if (readFile(operations))
+    {
+
+        cout << "¶ÁÈ¡½ø³Ì³É¹¦" << endl;
+
+        while (1)
+        {
+            // Ñ¡Ôñµ÷¶ÈËã·¨
+            cout << "ÇëÑ¡ÔñÖÃ»»Ëã·¨£º" << endl;
+            cout << "1.ÏÈ½øÏÈ³ö£¨FIFO£©" << endl;
+            cout << "2.×î½ü×îÉÙÊ¹ÓÃ£¨LRU£©" << endl;
+            cout << "3.Ê±ÖÓÖÃ»»£¨CLOCK£©" << endl;
+            cout << "4.Ëæ»úÖÃ»»" << endl;
+            cout << "ÇëÊäÈëÄúµÄÑ¡Ôñ£º" << endl;
+            int choice = 0;
+            cin >> choice;
+            switch (choice)
+            {
+            case 1:
+                firstInFirstOut(externalMemory, pageTable, operations, 4);
+                break;
+            case 2:
+                // LRU();
+                break;
+            case 3:
+                // CLOCK();
+                break;
+            case 4:
+                // randomReplace();
+                break;
+            default:
+                cout << "ÊäÈë´íÎó" << endl;
+            }
+
+            cout << "ÊÇ·ñÖØĞÂÑ¡ÔñËã·¨£¿(y: ÖØĞÂÑ¡Ôñ, n: ½áÊø³ÌĞò)" << endl;
+            char c;
+            cin >> c;
+            if (c != 'Y' && c != 'y')
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        cout << "¶ÁÈ¡²Ù×÷Ê§°Ü" << endl;
+    }
+
+    system("pause");
+    return 0;
 }
