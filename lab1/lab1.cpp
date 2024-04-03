@@ -113,6 +113,7 @@ bool readFile(vector<Process> &processes)
     while (!ifs.eof())
     {
         Process s;
+        // ifs >> s.id >> s.arrivalTime >> s.serviceTime >> s.priority;
         ifs >> s.id >> s.arrivalTime >> s.serviceTime;
         s.remainTime = s.serviceTime;
         s.print();
@@ -257,8 +258,6 @@ void roundRobinScheduling(vector<Process> &processes, double timeSlice)
                 p.endTime = time;
                 p.calculateTime();
                 completed++;
-
-                cout << "time: " << time << "  \t进程 " << p.id << " 完成" << endl;
             }
         }
         else // 如果队列内没有进程，则跳过时间到最近的进程就绪
@@ -274,7 +273,7 @@ void roundRobinScheduling(vector<Process> &processes, double timeSlice)
             {
                 readyQueue.push(q);
                 count++;
-                cout << "time: " << time << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
+                cout << "time: " << q.arrivalTime << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
             }
             else
             {
@@ -289,6 +288,7 @@ void roundRobinScheduling(vector<Process> &processes, double timeSlice)
         }
         else if (p.remainTime == 0)
         {
+            cout << "time: " << time << "  \t进程 " << p.id << " 完成" << endl;
             complete.push_back(p);
         }
     }
@@ -330,7 +330,7 @@ void shortJobFirstScheduling(vector<Process> &processes)
             {
                 complete.push_back(q);
                 count++;
-                cout << "time: " << time << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
+                cout << "time: " << q.arrivalTime << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
             }
             else
             {
@@ -429,8 +429,6 @@ void multiLevelFeedbackQueueScheduling(vector<Process> &processes, double timeSl
                     p.endTime = time;
                     p.calculateTime();
                     completed++;
-
-                    cout << "time: " << time << "  \t进程 " << p.id << " 完成" << endl;
                 }
 
                 thisTurn = p; // 临时存储当前运行的进程
@@ -452,7 +450,7 @@ void multiLevelFeedbackQueueScheduling(vector<Process> &processes, double timeSl
                 q.priority = 0;
                 readyQueue[0].push(q);
                 count++;
-                cout << "time: " << time << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
+                cout << "time: " << q.arrivalTime << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
 
                 // 如果新就绪的进程到达时间早于当前时间，且此次运行的程序不在一级队列，则需要考虑抢占
                 if (q.arrivalTime < time && q.priority < thisTurn.priority)
@@ -468,7 +466,7 @@ void multiLevelFeedbackQueueScheduling(vector<Process> &processes, double timeSl
                     thisTurn.remainTime += backTime;     // 剩余时间回溯
                     thisTurn.endTime = -1;               // 结束时间重置
 
-                    cout << "进程 " << thisTurn.id << " 回溯: " << backTime << " ,剩余时间 " << thisTurn.remainTime << endl;
+                    cout << "进程 " << thisTurn.id << " 被进程 " << q.id << " 抢占，回溯: " << backTime << "，剩余时间 " << thisTurn.remainTime << endl;
                 }
             }
             else
@@ -489,6 +487,7 @@ void multiLevelFeedbackQueueScheduling(vector<Process> &processes, double timeSl
         }
         else if (thisTurn.remainTime == 0)
         {
+            cout << "time: " << time << "  \t进程 " << p.id << " 完成" << endl;
             complete.push_back(thisTurn);
         }
         thisTurn.remainTime = -1; // 防止重复放入
