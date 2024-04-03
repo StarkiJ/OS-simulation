@@ -1,10 +1,8 @@
 #include <iostream>
-#include <string>
 #include <vector>
 #include <fstream>
-#include <queue>
-#include <algorithm>
 #include <iomanip>
+#include <ctime>
 
 using namespace std;
 
@@ -50,13 +48,13 @@ public:
         dirty = false;
     }
 
-    void init()
+    /*void init()
     {
         frameNumber = -1;
         access = -1;
         valid = false;
         dirty = false;
-    }
+    }*/
 
     void update(Operation op, int i) // 更新页表项
     {
@@ -158,14 +156,14 @@ void createPageTable(vector<vector<int>> &externalMemory, vector<PageTableItem> 
 }
 
 // 初始化页表
-void initPageTable(vector<PageTableItem> &pageTable)
+/*void initPageTable(vector<PageTableItem> &pageTable)
 {
     int len = pageTable.size();
     for (int i = 0; i < len; i++)
     {
         pageTable[i].init();
     }
-}
+}*/
 
 // 显示物理页
 void showPhyicalPage(vector<PageTableItem> &PageTable, int phyNum, bool ifclock)
@@ -192,13 +190,13 @@ void showPhyicalPage(vector<PageTableItem> &PageTable, int phyNum, bool ifclock)
 }
 
 // 先进先出FIFO
-void firstInFirstOut(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable, vector<Operation> &operations, int phyNum)
+void firstInFirstOut(vector<vector<int>> &externalMemory, vector<Operation> &operations, int phyNum)
 {
     cout << "先进先出（FIFO）算法开始" << endl;
 
-    initPageTable(pageTable); // 初始化页表
-
-    vector<vector<int>> physicalPage; // 物理页
+    vector<vector<int>> physicalPage;           // 物理页
+    vector<PageTableItem> pageTable;            // 页表
+    createPageTable(externalMemory, pageTable); // 建立页表
 
     int pageSize = externalMemory[0].size(); // 页大小
     int ptlen = pageTable.size();            // 页表长度
@@ -285,13 +283,13 @@ void firstInFirstOut(vector<vector<int>> &externalMemory, vector<PageTableItem> 
 }
 
 // 最近最少使用LRU
-void leastRecentlyUsed(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable, vector<Operation> &operations, int phyNum)
+void leastRecentlyUsed(vector<vector<int>> &externalMemory, vector<Operation> &operations, int phyNum)
 {
     cout << "最近最少使用（LRU）算法开始" << endl;
 
-    initPageTable(pageTable); // 初始化页表
-
-    vector<vector<int>> physicalPage; // 物理页4x8
+    vector<vector<int>> physicalPage;           // 物理页
+    vector<PageTableItem> pageTable;            // 页表
+    createPageTable(externalMemory, pageTable); // 建立页表
 
     int pageSize = externalMemory[0].size(); // 页大小
     int ptlen = pageTable.size();            // 页表长度
@@ -377,13 +375,13 @@ void leastRecentlyUsed(vector<vector<int>> &externalMemory, vector<PageTableItem
 }
 
 // 时钟置换CLOCK 即 最近未使用（Not Recently Used，NRU）
-void clock(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable, vector<Operation> &operations, int phyNum)
+void clock(vector<vector<int>> &externalMemory, vector<Operation> &operations, int phyNum)
 {
     cout << "时钟（CLOCK）算法开始" << endl;
 
-    initPageTable(pageTable); // 初始化页表
-
-    vector<vector<int>> physicalPage; // 物理页4x8
+    vector<vector<int>> physicalPage;           // 物理页
+    vector<PageTableItem> pageTable;            // 页表
+    createPageTable(externalMemory, pageTable); // 建立页表
 
     int pageSize = externalMemory[0].size(); // 页大小
     int ptlen = pageTable.size();            // 页表长度
@@ -476,17 +474,102 @@ void clock(vector<vector<int>> &externalMemory, vector<PageTableItem> &pageTable
     cout << "缺页率：" << ((double)miss / (double)oplen) * 100 << " %" << endl;
 }
 
+// 随机置换
+void randomReplace(vector<vector<int>> &externalMemory, vector<Operation> &operations, int phyNum)
+{
+    cout << "随机置换算法开始" << endl;
+
+    srand((unsigned)time(NULL)); // 随机数种子
+
+    vector<vector<int>> physicalPage;           // 物理页
+    vector<PageTableItem> pageTable;            // 页表
+    createPageTable(externalMemory, pageTable); // 建立页表
+
+    int pageSize = externalMemory[0].size(); // 页大小
+    int ptlen = pageTable.size();            // 页表长度
+    int oplen = operations.size();           // 操作数
+    int miss = 0;                            // 缺页次数
+
+    for (int i = 0; i < oplen; i++) // 遍历操作
+    {
+        Operation op = operations[i];
+        int pageNum = op.logicalAddress / pageSize; // 页号
+        int offset = op.logicalAddress % pageSize;  // 页内偏移
+
+        cout << "操作：" << op.logicalAddress << " " << (op.op == read ? "read" : "write") << endl;
+        cout << "页号：" << pageNum << " 偏移：" << offset << endl;
+
+        if (pageNum >= ptlen)
+        {
+            cout << operations[i].logicalAddress << " 页号 > 页表长度，越界中断！!!" << endl;
+            return;
+        }
+
+        PageTableItem item = pageTable[pageNum]; // 对应的页表项
+
+        if (!item.valid) // 不在内存中
+        {
+            cout << "缺页：不在内存中" << endl;
+
+            miss++;
+
+            if (physicalPage.size() < phyNum) // 物理页没装满
+            {
+                physicalPage.push_back(externalMemory[item.address]);
+                item.frameNumber = physicalPage.size() - 1;
+            }
+            else // 物理页已装满
+            {
+                int framNum = rand() % phyNum; // 随机选择被替换的物理块号
+                int replaced;                  // 被替换的物理块对应的页号
+
+                for (int j = 0; j < ptlen; j++)
+                {
+                    if (pageTable[j].valid && (pageTable[j].frameNumber == framNum)) // 找到正在使用目标物理页的页表项
+                    {
+                        replaced = j;
+                        break;
+                    }
+                }
+
+                pageTable[replaced].valid = false; // 无效化页表项
+                if (pageTable[replaced].dirty)     // 如果有过修改则需要写回
+                {
+                    externalMemory[pageTable[replaced].address] = physicalPage[framNum];
+                    pageTable[replaced].dirty = false;
+
+                    cout << "写回：" << framNum << " " << pageTable[replaced].address << endl;
+                }
+
+                physicalPage[framNum] = externalMemory[item.address]; // 更新物理块
+                item.frameNumber = framNum;                           // 更新页表对应的物理块号
+            }
+        }
+        else
+        {
+            cout << "命中：在内存中" << endl;
+        }
+
+        item.update(op, i); // 更新页表
+        pageTable[pageNum] = item;
+
+        cout << "物理地址：" << item.frameNumber << offset << endl;
+
+        showPhyicalPage(pageTable, phyNum, 0);
+    }
+
+    cout << "随机置换算法结束" << endl;
+    cout << "缺页率：" << ((double)miss / (double)oplen) * 100 << " %" << endl;
+}
+
 int main()
 {
     vector<Operation> operations;       // 操作序列
     vector<vector<int>> externalMemory; // 外存
-    vector<PageTableItem> pageTable;    // 页表
 
     if (readEM(externalMemory, 8)) // 读取外存
     {
         cout << "读取外存成功" << endl;
-
-        createPageTable(externalMemory, pageTable); // 建立页表
 
         if (readFile(operations))
         {
@@ -507,16 +590,16 @@ int main()
                 switch (choice)
                 {
                 case 1:
-                    firstInFirstOut(externalMemory, pageTable, operations, 3);
+                    firstInFirstOut(externalMemory, operations, 3);
                     break;
                 case 2:
-                    leastRecentlyUsed(externalMemory, pageTable, operations, 3);
+                    leastRecentlyUsed(externalMemory, operations, 3);
                     break;
                 case 3:
-                    clock(externalMemory, pageTable, operations, 3);
+                    clock(externalMemory, operations, 3);
                     break;
                 case 4:
-                    // randomReplace();
+                    randomReplace(externalMemory, operations, 3);
                     break;
                 default:
                     cout << "输入错误" << endl;
