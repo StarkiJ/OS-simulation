@@ -79,11 +79,16 @@ bool compareServiceTime(Process a, Process b)
     return a.serviceTime < b.serviceTime;
 }
 
+bool compareArrivalTime(Process a, Process b)
+{
+    return a.arrivalTime < b.arrivalTime;
+}
+
 // 读取存储的计划
 bool readFile(vector<Process> &processes)
 {
     ifstream ifs;
-    ifs.open("xym1.txt", ios::in);
+    ifs.open("lab13.txt", ios::in);
 
     // 文件不存在则返回
     if (!ifs)
@@ -122,6 +127,7 @@ bool readFile(vector<Process> &processes)
 void showResult(vector<Process> &processes)
 {
     int n = processes.size();
+    sort(processes.begin(), processes.end(), compareArrivalTime);
 
     cout << "显示结果" << endl;
     cout << left << "|" << setw(10) << "进程ID"
@@ -147,16 +153,18 @@ void performanceIndicators(vector<Process> &processes)
 {
     cout << "开始计算性能指标" << endl;
 
-    showResult(processes);
-
     Process p;
-    int n = processes.size();               // 进程数量
-    double totalServiceTime = 0;            //
-    double totalResponseTime = 0;           // 总响应时间
-    double totalTurnaroundTime = 0;         // 总周转时间
-    double totalWeightedTurnaroundTime = 0; // 总带权周转时间
-    double totalWaitTime = 0;               // 总等待时间
-    double Utilization = 0;                 // 利用率
+
+    int n = processes.size();                     // 进程数量
+    double maxEndTime = processes.back().endTime; // 最大结束时间
+    double totalServiceTime = 0;                  // 总服务时间
+    double totalResponseTime = 0;                 // 总响应时间
+    double totalTurnaroundTime = 0;               // 总周转时间
+    double totalWeightedTurnaroundTime = 0;       // 总带权周转时间
+    double totalWaitTime = 0;                     // 总等待时间
+    double Utilization = 0;                       // 利用率
+
+    showResult(processes);
 
     for (int i = 0; i < n; i++)
     {
@@ -175,7 +183,7 @@ void performanceIndicators(vector<Process> &processes)
         }
     }
 
-    Utilization = 100 * totalServiceTime / processes.back().endTime;
+    Utilization = 100 * totalServiceTime / maxEndTime;
 
     cout << "平均响应时间：" << totalResponseTime / n << endl;
     cout << "平均周转时间：" << totalTurnaroundTime / n << endl;
@@ -222,22 +230,6 @@ void roundRobinScheduling(vector<Process> &processes, double timeSlice)
     // 时间片轮转
     while (completed < n)
     {
-        while (count < n)
-        {
-            // 将进程加入就绪队列
-            Process q = processes[count];
-            if (q.arrivalTime <= time)
-            {
-                readyQueue.push(q);
-                count++;
-                cout << "time: " << time << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
-            }
-            else
-            {
-                break;
-            }
-        }
-
         if (!readyQueue.empty())
         // 从就绪队列中取出进程
         {
@@ -268,20 +260,36 @@ void roundRobinScheduling(vector<Process> &processes, double timeSlice)
 
                 cout << "time: " << time << "  \t进程 " << p.id << " 完成" << endl;
             }
-
-            // 将进程放回
-            if (p.remainTime > 0)
-            {
-                readyQueue.push(p);
-            }
-            else
-            {
-                complete.push_back(p);
-            }
         }
         else // 如果队列内没有进程，则跳过时间到最近的进程就绪
         {
             time = processes[count].arrivalTime;
+        }
+
+        while (count < n)
+        {
+            // 将进程加入就绪队列
+            Process q = processes[count];
+            if (q.arrivalTime <= time)
+            {
+                readyQueue.push(q);
+                count++;
+                cout << "time: " << time << "  \t进程 " << q.id << " 已经加入就绪队列" << endl;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // 将进程放回
+        if (p.remainTime > 0)
+        {
+            readyQueue.push(p);
+        }
+        else if (p.remainTime == 0)
+        {
+            complete.push_back(p);
         }
     }
 
@@ -498,8 +506,9 @@ int main()
 
     if (readFile(processes))
     {
-
         cout << "读取进程成功" << endl;
+
+        sort(processes.begin(), processes.end(), compareArrivalTime); // 按照到达时间排序
 
         while (1)
         {
@@ -538,6 +547,7 @@ int main()
     else
     {
         cout << "读取进程失败" << endl;
+        system("pause");
     }
 
     // system("pause");
