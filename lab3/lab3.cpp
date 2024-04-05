@@ -6,17 +6,49 @@ using namespace std;
 class Block
 {
 public:
-    int number; // 编号
-    int size;   // 大小
-    int start;  // 起始地址
-    int used;   // 已分配
+    int num;   // 编号
+    int size;  // 大小
+    int start; // 起始地址
+    int used;  // 已分配
 
-    Block(int number, int size, int start, int used)
+    Block(int num, int size, int start, int used)
     {
-        this->number = number;
+        this->num = num;
         this->size = size;
         this->start = start;
         this->used = used;
+    }
+};
+
+class Blocks
+{
+public:
+    vector<Block> blocks; // 块列表
+    vector<int> free;     // 空闲块列表
+    int num;              // 块数量
+
+    Blocks() {}
+    Blocks(int space, int size)
+    {
+        num = space / size;
+        for (int i = 0; i < num; i++)
+        {
+            blocks.push_back(Block(i, size, i * size, 0));
+            free.push_back(i);
+        }
+    }
+
+    // 寻找空闲外存空间块
+    int findFreeBlock()
+    {
+        if (free.size() == 0)
+        {
+            return -1;
+        }
+
+        int num = free.front();
+        free.erase(free.begin());
+        return num;
     }
 };
 
@@ -32,66 +64,167 @@ public:
     int protection; // 保护
     int updatetime; // 更新时间
 
-    File(string name, int identifier, int type, int protection)
+    File(string name, int identifier, int type, int location, int protection)
     {
         this->name = name;
         this->identifier = identifier;
         this->type = type;
         this->location = location;
-        this->size = size;
+        this->size = 0;
         this->protection = protection;
+    }
+};
+
+// 树状目录
+class Folder
+{
+public:
+    string name;
+
+    vector<File> files;
+    vector<Folder> folders;
+
+    Folder() {}
+    Folder(string name)
+    {
+        this->name = name;
+    }
+
+    bool getPath(string path) // 获取路径
+    {
+    }
+
+    int findFolder(string name) // 获取文件
+    {
+        int size = folders.size();
+        for (int j = 0; j < size; j++)
+        {
+            if (folders[j].name == name)
+            {
+                return j;
+            }
+            return -1;
+        }
     }
 };
 
 class FileSystem
 {
-    vector<int> space;           // 外存空间
-    vector<int> memory;          // 内存
-    vector<File> directory;      // 目录
-    vector<Block> spaceBlocks;   // 外存空间块列表
-    vector<Block> memoryBlocks;  // 内存块列表
-    vector<int> freeSpaceBlocks; // 空闲外存空间块列表
-    vector<int> freeMemBlocks;   // 空闲内存块列表
+    vector<int> space;  // 外存空间
+    vector<int> memory; // 内存
 
-    int blockSize;
-    int numOfSpaceBlocks; // 外存空间块数量
-    int numOfMemBlocks;   // 内存块数量
-    int numOfFiles;       // 文件数量
+    Blocks spaceBlocks; // 外存空间块
+    Blocks memBlocks;   // 内存块
+
+    int blockSize;  // 块大小
+    int numOfFiles; // 文件数量
+
+    Folder root;       // 根目录
+    Folder *curFolder; // 当前目录
+    string curPath;    // 当前路径
 
 public:
     FileSystem(int sizeOfSpace, int sizeOfMemory, int blockSize)
     {
         space = vector<int>(sizeOfSpace, -1);
         memory = vector<int>(sizeOfMemory, -1);
+
         this->blockSize = blockSize;
-        numOfSpaceBlocks = sizeOfSpace / blockSize;
-        numOfMemBlocks = sizeOfMemory / blockSize;
         numOfFiles = 0;
 
-        for (int i = 0; i < numOfSpaceBlocks; i++)
-        {
-            spaceBlocks.push_back(Block(i, blockSize, i * blockSize, 0));
-        }
-        for (int i = 0; i < numOfMemBlocks; i++)
-        {
-            memoryBlocks.push_back(Block(i, blockSize, i * blockSize, 0));
-        }
+        spaceBlocks = Blocks(sizeOfSpace, blockSize);
+        memBlocks = Blocks(sizeOfMemory, blockSize);
+
+        root = Folder("root");
+        curFolder = &root;
+        curPath = "";
     }
 
-    // 寻找空闲外存空间块
-    int findFreeBlock()
+    bool openFolder(string path)
     {
-        if (freeSpaceBlocks.size() == 0)
+        string name = "";           // 文件夹的名字
+        string tmpPath = curPath;   // 临时存放当前路径
+        Folder *tmpPtr = curFolder; // 临时指针存放当前目录
+        int len = path.length();    // 路径长度
+
+        // 判断是绝对路径还是相对路径
+        if (path[0] == '/') // 绝对路径
         {
-            cout << "空间不足，寻找空闲块失败" << endl;
-            return;
+            curPath = path.substr(0, len - 1);
+            curFolder = &root;
         }
+        else if (path[1] == '.') // 相对路径：上一级目录
+        {
+            if (curPath.length() == 0)
+            {
+                cout << "打开文件夹失败，当前文件夹没有父文件夹" << endl;
+                return false;
+            }
+
+            int curlen = curPath.length(); // 当前路径长度
+            for (int i = curlen; i > 0; i--)
+            {
+                if (curPath[i] == '/')
+                {
+                    if (!openFolder(curPath.substr(0, i)))
+                    {
+                        cout << "打开文件夹失败，当前文件夹的父文件夹路径错误" << endl;
+                        return false;
+                    }
+                    curPath = curPath.substr(0, i) + path.substr(2, len - 1);
+                    break;
+                }
+            }
+        }
+        else if (path[0] == '.') // 相对路径：当前目录
+        {
+            curPath += path.substr(1, len - 1);
+        }
+
+        for (int i = 0; i < len; i++)
+        {
+            if (path[i] == '.') // 跳过点
+            {
+                continue;
+            }
+            if (path[i] != '/') // 是名字
+            {
+                name += path[i];
+                if (i != len - 1) // 最后一个没有'/'结尾
+                {
+                    continue;
+                }
+            }
+
+            if (name != "")
+            {
+                int num = curFolder->findFolder(name);
+                if (num == -1)
+                {
+                    cout << "打开文件夹失败，没有找到文件夹: " << path.substr(0, i) << endl;
+                    curPath = tmpPath;  // 回到当前路径
+                    curFolder = tmpPtr; // 回到当前目录
+                    return false;
+                }
+                curFolder = &curFolder->folders[num];
+                name = "";
+            }
+        }
+
+        return true;
     }
 
     // 创建文件，指明文件名、标识符、类型、位置、大小、保护属性：1.分配空间，2.建立目录项
     void createFile(string name, int type, int protection)
     {
-        File newFile(name, numOfFiles, type, protection);
+        int location = spaceBlocks.findFreeBlock();
+        if (location == -1)
+        {
+            cout << "空间不足，创建文件失败" << endl;
+            return;
+        }
+        File newFile(name, numOfFiles, type, location, protection);
+        curFolder->files.push_back(newFile);
         numOfFiles++;
     }
 
