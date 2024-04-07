@@ -2,43 +2,45 @@
 
 using namespace std;
 
-// å—
+// ¿é
 class Block
 {
 public:
-    int num;   // ç¼–å·
-    int size;  // å¤§å°
-    int start; // èµ·å§‹åœ°å€
-    int used;  // å·²åˆ†é…
+    int num;   // ĞòºÅ
+    int start; // ÆğÊ¼µØÖ·
+    int used;  // ÒÑ·ÖÅä
 
-    Block(int num, int size, int start, int used)
+    Block(int num, int start)
     {
         this->num = num;
-        this->size = size;
         this->start = start;
-        this->used = used;
+        this->used = 0;
     }
 };
 
 class Blocks
 {
 public:
-    vector<Block> blocks; // å—åˆ—è¡¨
-    vector<int> free;     // ç©ºé—²å—åˆ—è¡¨
-    int num;              // å—æ•°é‡
+    vector<Block> blocks; // ¿éÁĞ±í
+    vector<int> free;     // ¿ÕÏĞ¿éÁĞ±í
+
+    int size; // ¿é´óĞ¡
+    int num;  // ¿éÊıÁ¿
 
     Blocks() {}
     Blocks(int space, int size)
     {
-        num = space / size;
+        this->size = size;
+        this->num = space / size;
+
         for (int i = 0; i < num; i++)
         {
-            blocks.push_back(Block(i, size, i * size, 0));
+            blocks.push_back(Block(i, i * size));
             free.push_back(i);
         }
     }
 
-    // å¯»æ‰¾ç©ºé—²å¤–å­˜ç©ºé—´å—
+    // Ñ°ÕÒ¿ÕÏĞÍâ´æ¿Õ¼ä¿é
     int findFreeBlock()
     {
         if (free.size() == 0)
@@ -46,23 +48,38 @@ public:
             return -1;
         }
 
-        int num = free.front();
+        int index = free.front(); // È¡³öµÚÒ»¸ö¿ÕÏĞ¿éĞòºÅ
         free.erase(free.begin());
-        return num;
+
+        blocks[index].used = 0; // ÒÑ·ÖÅä¿Õ¼äÖÃ0
+
+        return index;
+    }
+
+    // ÊÍ·Å¿é
+    int freeBlock(int index)
+    {
+        free.push_back(index);
+        if (blocks[index].used == size) // Èç¹û²»ÊÇÕâ¸öÎÄ¼şµÄ×îºóÒ»¸ö¿é
+        {
+            return false;
+        }
+
+        return true;
     }
 };
 
-// ç›®å½•é¡¹(æ–‡ä»¶æ§åˆ¶å—)
+// Ä¿Â¼Ïî(ÎÄ¼ş¿ØÖÆ¿é)
 class File
 {
 public:
-    string name;    // æ–‡ä»¶å
-    int identifier; // æ ‡è¯†ç¬¦
-    int type;       // ç±»å‹
-    int location;   // ä½ç½®
-    int size;       // å¤§å°
-    int protection; // ä¿æŠ¤
-    int updatetime; // æ›´æ–°æ—¶é—´
+    string name;    // ÎÄ¼şÃû
+    int identifier; // ±êÊ¶·û
+    int type;       // ÀàĞÍ
+    int location;   // Î»ÖÃ
+    int size;       // ´óĞ¡
+    int protection; // ±£»¤
+    int updatetime; // ¸üĞÂÊ±¼ä
 
     File(string name, int identifier, int type, int location, int protection)
     {
@@ -75,7 +92,7 @@ public:
     }
 };
 
-// æ ‘çŠ¶ç›®å½•
+// Ê÷×´Ä¿Â¼
 class Folder
 {
 public:
@@ -90,11 +107,7 @@ public:
         this->name = name;
     }
 
-    bool getPath(string path) // è·å–è·¯å¾„
-    {
-    }
-
-    int findFolder(string name) // è·å–æ–‡ä»¶
+    int findFolder(string name) // »ñÈ¡ÎÄ¼ş¼Ğ±àºÅ
     {
         int size = folders.size();
         for (int j = 0; j < size; j++)
@@ -103,29 +116,50 @@ public:
             {
                 return j;
             }
-            return -1;
         }
+        return -1;
+    }
+
+    int findFile(string name) // »ñÈ¡ÎÄ¼ş±àºÅ
+    {
+        int size = files.size();
+        for (int j = 0; j < size; j++)
+        {
+            if (files[j].name == name)
+            {
+                return j;
+            }
+        }
+        return -1;
     }
 };
 
 class FileSystem
 {
-    vector<int> space;  // å¤–å­˜ç©ºé—´
-    vector<int> memory; // å†…å­˜
+    string password; // ÃÜÂë
+    int authority;   // È¨ÏŞ¼¶±ğ
 
-    Blocks spaceBlocks; // å¤–å­˜ç©ºé—´å—
-    Blocks memBlocks;   // å†…å­˜å—
+    vector<int> space;  // Íâ´æ¿Õ¼ä
+    vector<int> memory; // ÄÚ´æ
 
-    int blockSize;  // å—å¤§å°
-    int numOfFiles; // æ–‡ä»¶æ•°é‡
+    vector<File> openFiles; // ÄÚ´æ´ò¿ªÎÄ¼ş±í
 
-    Folder root;       // æ ¹ç›®å½•
-    Folder *curFolder; // å½“å‰ç›®å½•
-    string curPath;    // å½“å‰è·¯å¾„
+    Blocks spaceBlocks; // Íâ´æ¿Õ¼ä¿é
+    Blocks memBlocks;   // ÄÚ´æ¿é
+
+    int blockSize;  // ¿é´óĞ¡
+    int numOfFiles; // ÀúÊ·ÎÄ¼şÊıÁ¿(°üº¬É¾³ıÎÄ¼ş)
+
+    Folder root;       // ¸ùÄ¿Â¼
+    Folder *curFolder; // µ±Ç°ÎÄ¼ş¼ĞÖ¸Õë
+    string curPath;    // µ±Ç°Â·¾¶
 
 public:
     FileSystem(int sizeOfSpace, int sizeOfMemory, int blockSize)
     {
+        password = "admin";
+        authority = 2;
+
         space = vector<int>(sizeOfSpace, -1);
         memory = vector<int>(sizeOfMemory, -1);
 
@@ -137,125 +171,365 @@ public:
 
         root = Folder("root");
         curFolder = &root;
-        curPath = "";
+        curPath = "root:";
     }
 
+    // ÉèÖÃÃÜÂë
+    void setPassword()
+    {
+        getline(cin, password);
+    }
+
+    // µ÷Õû²Ù×÷È¨ÏŞ
+    void adjustAuthority(string word)
+    {
+        if (word != password)
+        {
+            cout << "ÃÜÂë´íÎó" << endl;
+            return;
+        }
+
+        cout << "ÇëÑ¡ÔñÈ¨ÏŞ¼¶±ğ£º" << endl;
+        cout << "0.½ûÖ¹·ÃÎÊ" << endl;
+        cout << "1.Ö»¶Á" << endl;
+        cout << "2.¶ÁĞ´" << endl;
+        cin >> authority;
+    }
+
+    // ÅĞ¶ÏÊÇ·ñÎ¥¹æ
+    bool ifIllegal(int limit)
+    {
+        if (authority < limit)
+        {
+            cout << "È¨ÏŞ²»×ã" << endl;
+            return true;
+        }
+        return false;
+    }
+
+    // ÏÔÊ¾µ±Ç°Â·¾¶
+    void showPath()
+    {
+        cout << "µ±Ç°Â·¾¶£º" << curPath << endl;
+    }
+
+    // ÏÔÊ¾µ±Ç°ÎÄ¼ş¼ĞÄÚÈİ
+    void showThisFolder()
+    {
+        showPath();
+
+        cout << "ÎÄ¼ş¼Ğ£º";
+        int size = curFolder->folders.size();
+        for (int i = 0; i < size; i++)
+        {
+            cout << curFolder->folders[i].name << " ";
+        }
+        cout << endl;
+
+        cout << "ÎÄ¼ş£º";
+        size = curFolder->files.size();
+        for (int i = 0; i < size; i++)
+        {
+            cout << curFolder->files[i].name << " ";
+        }
+        cout << endl;
+    }
+
+    // ´ò¿ªÎÄ¼ş¼Ğ
     bool openFolder(string path)
     {
-        string name = "";           // æ–‡ä»¶å¤¹çš„åå­—
-        string tmpPath = curPath;   // ä¸´æ—¶å­˜æ”¾å½“å‰è·¯å¾„
-        Folder *tmpPtr = curFolder; // ä¸´æ—¶æŒ‡é’ˆå­˜æ”¾å½“å‰ç›®å½•
-        int len = path.length();    // è·¯å¾„é•¿åº¦
+        string name = "";              // ÎÄ¼ş¼ĞµÄÃû×Ö
+        string tmpPath = curPath;      // ÁÙÊ±Â·¾¶
+        Folder *tmpFolder = curFolder; // ÁÙÊ±ÎÄ¼ş¼ĞÖ¸Õë
+        int len = path.length();       // Â·¾¶³¤¶È
 
-        // åˆ¤æ–­æ˜¯ç»å¯¹è·¯å¾„è¿˜æ˜¯ç›¸å¯¹è·¯å¾„
-        if (path[0] == '/') // ç»å¯¹è·¯å¾„
+        // ·ÀÖ¹ÊäÈëÂ·¾¶ÖĞ´øÓĞ"root:"
+        if (path.substr(0, 5) == "root:") // ·ÀÖ¹ÊäÈëÂ·¾¶ÖĞ´øÓĞ"root:"
         {
-            curPath = path.substr(0, len - 1);
+            if (len == 5)
+            {
+                path += "/";
+            }
+            path = path.substr(5, len);
+            len = path.length();
+        }
+
+        // ÅĞ¶ÏÂ·¾¶¸ñÊ½
+        if (path[0] == '/') // ¾ø¶ÔÂ·¾¶
+        {
+            if (path == "/") // ÌØÊâÇé¿ö£¬·ÀÖ¹"/"µş¼Ó
+            {
+                tmpPath = "root:";
+            }
+            else
+            {
+                tmpPath = "root:" + path;
+            }
             curFolder = &root;
         }
-        else if (path[1] == '.') // ç›¸å¯¹è·¯å¾„ï¼šä¸Šä¸€çº§ç›®å½•
+        else if (path.substr(0, 2) == "./") // Ïà¶ÔÂ·¾¶£ºµ±Ç°Ä¿Â¼
         {
-            if (curPath.length() == 0)
+            if (path != "./")
             {
-                cout << "æ‰“å¼€æ–‡ä»¶å¤¹å¤±è´¥ï¼Œå½“å‰æ–‡ä»¶å¤¹æ²¡æœ‰çˆ¶æ–‡ä»¶å¤¹" << endl;
+                tmpPath += path.substr(1, len);
+            }
+            else
+            {
+                cout << "??? Ô­µØTP ???" << endl;
+                return false;
+            }
+        }
+        else if (path.substr(0, 3) == "../") // Ïà¶ÔÂ·¾¶£ºÉÏÒ»¼¶Ä¿Â¼
+        {
+            if (curPath == "root:")
+            {
+                cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬¸ùÄ¿Â¼Ã»ÓĞ¸¸ÎÄ¼ş¼Ğ" << endl;
                 return false;
             }
 
-            int curlen = curPath.length(); // å½“å‰è·¯å¾„é•¿åº¦
+            int curlen = curPath.length(); // µ±Ç°Â·¾¶³¤¶È
             for (int i = curlen; i > 0; i--)
             {
                 if (curPath[i] == '/')
                 {
                     if (!openFolder(curPath.substr(0, i)))
                     {
-                        cout << "æ‰“å¼€æ–‡ä»¶å¤¹å¤±è´¥ï¼Œå½“å‰æ–‡ä»¶å¤¹çš„çˆ¶æ–‡ä»¶å¤¹è·¯å¾„é”™è¯¯" << endl;
+                        cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬¸¸ÎÄ¼ş¼ĞÂ·¾¶´íÎó" << endl;
                         return false;
                     }
-                    curPath = curPath.substr(0, i) + path.substr(2, len - 1);
+
+                    if (path == "../") // ÌØÊâÇé¿ö
+                    {
+                        tmpPath = curPath.substr(0, i);
+                    }
+                    else
+                    {
+                        tmpPath = curPath.substr(0, i) + path.substr(2, len);
+                    }
                     break;
                 }
             }
         }
-        else if (path[0] == '.') // ç›¸å¯¹è·¯å¾„ï¼šå½“å‰ç›®å½•
+        else
         {
-            curPath += path.substr(1, len - 1);
+            cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬Â·¾¶ÊäÈë´íÎó£¡" << endl;
+            return false;
         }
 
+        // ±éÀúÂ·¾¶£¬Ñ°ÕÒÄ¿±êÎÄ¼ş¼Ğ
         for (int i = 0; i < len; i++)
         {
-            if (path[i] == '.') // è·³è¿‡ç‚¹
+            if (path[i] == '.') // Ìø¹ıµã
             {
                 continue;
             }
-            if (path[i] != '/') // æ˜¯åå­—
+            if (path[i] != '/') // ÊÇÃû×Ö
             {
                 name += path[i];
-                if (i != len - 1) // æœ€åä¸€ä¸ªæ²¡æœ‰'/'ç»“å°¾
+                if (i != len - 1) // ×îºóÒ»¸öÃ»ÓĞ'/'½áÎ²
                 {
                     continue;
                 }
+                i++; // ·ÀÖ¹×îºóÒ»Î»ÎŞ·¨Êä³ö
             }
 
             if (name != "")
             {
-                int num = curFolder->findFolder(name);
-                if (num == -1)
+                int index = curFolder->findFolder(name);
+                if (index == -1)
                 {
-                    cout << "æ‰“å¼€æ–‡ä»¶å¤¹å¤±è´¥ï¼Œæ²¡æœ‰æ‰¾åˆ°æ–‡ä»¶å¤¹: " << path.substr(0, i) << endl;
-                    curPath = tmpPath;  // å›åˆ°å½“å‰è·¯å¾„
-                    curFolder = tmpPtr; // å›åˆ°å½“å‰ç›®å½•
+                    cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬Ã»ÓĞÕÒµ½ÎÄ¼ş¼Ğ: " << path.substr(0, i) << endl;
+                    curFolder = tmpFolder; // »ØÍËÎÄ¼ş¼ĞÖ¸Õë
                     return false;
                 }
-                curFolder = &curFolder->folders[num];
+                curFolder = &curFolder->folders[index];
                 name = "";
             }
         }
 
+        curPath = tmpPath; // ¸üĞÂÂ·¾¶
+
         return true;
     }
 
-    // åˆ›å»ºæ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åã€æ ‡è¯†ç¬¦ã€ç±»å‹ã€ä½ç½®ã€å¤§å°ã€ä¿æŠ¤å±æ€§ï¼š1.åˆ†é…ç©ºé—´ï¼Œ2.å»ºç«‹ç›®å½•é¡¹
-    void createFile(string name, int type, int protection)
+    // ´´½¨ÎÄ¼ş¼Ğ
+    bool createFolder(string name)
     {
+        // ÅĞ¶ÏÎÄ¼ş¼ĞÃû×ÖÊÇ·ñÖØ¸´
+        if (curFolder->findFolder(name) != -1)
+        {
+            cout << "´´½¨ÎÄ¼ş¼ĞÊ§°Ü£¬ÎÄ¼ş¼ĞÒÑ´æÔÚ" << endl;
+            return false;
+        }
+        Folder newFolder(name);
+        curFolder->folders.push_back(newFolder);
+
+        cout << "´´½¨ÎÄ¼ş¼Ğ³É¹¦£º" << curPath << "/" << name << endl;
+        return true;
+    }
+
+    // ´´½¨ÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃû¡¢±êÊ¶·û¡¢ÀàĞÍ¡¢Î»ÖÃ¡¢´óĞ¡¡¢±£»¤ÊôĞÔ£º1.·ÖÅä¿Õ¼ä£¬2.½¨Á¢Ä¿Â¼Ïî
+    bool createFile(string name, int type, int protection)
+    {
+        // ÅĞ¶ÏÎÄ¼şÃûÊÇ·ñÖØ¸´
+        if (curFolder->findFile(name) != -1)
+        {
+            cout << "´´½¨ÎÄ¼şÊ§°Ü£¬ÎÄ¼şÒÑ´æÔÚ" << endl;
+            return false;
+        }
+
+        // ÅĞ¶Ï¿Õ¼äÊÇ·ñ×ã¹»
         int location = spaceBlocks.findFreeBlock();
         if (location == -1)
         {
-            cout << "ç©ºé—´ä¸è¶³ï¼Œåˆ›å»ºæ–‡ä»¶å¤±è´¥" << endl;
-            return;
+            cout << "´´½¨ÎÄ¼şÊ§°Ü£¬¿Õ¼ä²»×ã" << endl;
+            return false;
         }
         File newFile(name, numOfFiles, type, location, protection);
         curFolder->files.push_back(newFile);
         numOfFiles++;
+
+        cout << "´´½¨ÎÄ¼ş³É¹¦£º" << curPath << "/" << name << endl;
+        return true;
     }
 
-    // å†™æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åå’Œè¦å†™å…¥æ–‡ä»¶çš„å†…å®¹ï¼š1.åœ¨ç›®å½•ä¸­æœç´¢ï¼Œ2.åˆ©ç”¨ç›®å½•çš„æ–‡ä»¶æŒ‡é’ˆå†™æ–‡ä»¶
+    // Ğ´ÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃûºÍÒªĞ´ÈëÎÄ¼şµÄÄÚÈİ£º1.ÔÚÄ¿Â¼ÖĞËÑË÷£¬2.ÀûÓÃÄ¿Â¼µÄÎÄ¼şÖ¸ÕëĞ´ÎÄ¼ş
     void writeFile(string name, int data)
     {
     }
 
-    // è¯»æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åå’Œè¦è¯»å…¥æ–‡ä»¶å—çš„å†…å­˜ä½ç½®ï¼š1.åœ¨ç›®å½•ä¸­æœç´¢ï¼Œ2.å°†æ–‡ä»¶å†…å®¹è¯»å…¥å†…å­˜
+    // ¶ÁÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃûºÍÒª¶ÁÈëÎÄ¼ş¿éµÄÄÚ´æÎ»ÖÃ£º1.ÔÚÄ¿Â¼ÖĞËÑË÷£¬2.½«ÎÄ¼şÄÚÈİ¶ÁÈëÄÚ´æ
     void readFile(string name, int start)
     {
     }
 
-    // åˆ é™¤æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶å:1.åœ¨ç›®å½•ä¸­æœç´¢ï¼Œ2.é‡Šæ”¾ç©ºé—´ï¼Œ3.åˆ é™¤ç›®å½•é¡¹
-    void deleteFile(string name)
+    // É¾³ıÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃû:1.ÔÚÄ¿Â¼ÖĞËÑË÷£¬2.ÊÍ·Å¿Õ¼ä£¬3.É¾³ıÄ¿Â¼Ïî
+    bool deleteFile(string name)
     {
+        int index = curFolder->findFile(name);
+        if (index == -1)
+        {
+            cout << "É¾³ıÎÄ¼şÊ§°Ü£¬Ã»ÓĞÕÒµ½ÎÄ¼ş" << endl;
+            return false;
+        }
+
+        // ÊÍ·Å¿Õ¼ä
+        int location = curFolder->files[index].location;
+        while (!spaceBlocks.freeBlock(location))
+        {
+            location = space[location * blockSize + blockSize - 1];
+        }
+
+        // É¾³ıÄ¿Â¼Ïî
+        curFolder->files.erase(curFolder->files.begin() + index);
     }
 
-    // æ‰“å¼€æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åï¼š1.å°†ç›®å½•ä¿¡æ¯è¯»å…¥å†…å­˜æ‰“å¼€æ–‡ä»¶è¡¨ä¸­ï¼Œå»ºç«‹èµ·ç”¨æˆ·è¿›ç¨‹å’Œæ–‡ä»¶ä¹‹é—´çš„è”ç³»ã€‚
-    void openFile(string name)
+    // ´ò¿ªÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃû£º1.½«Ä¿Â¼ĞÅÏ¢¶ÁÈëÄÚ´æ´ò¿ªÎÄ¼ş±íÖĞ£¬½¨Á¢ÆğÓÃ»§½ø³ÌºÍÎÄ¼şÖ®¼äµÄÁªÏµ¡£
+    bool openFile(string name)
     {
+        int index = curFolder->findFile(name);
+        if (index == -1)
+        {
+            cout << "´ò¿ªÎÄ¼şÊ§°Ü£¬Ã»ÓĞÕÒµ½ÎÄ¼ş" << endl;
+            return false;
+        }
     }
 
-    // å…³é—­æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åï¼š1.æ’¤é”€ä¸»å­˜ä¸­çš„ç›®å½•ä¿¡æ¯ï¼Œå¹¶é‡Šæ”¾ç”¨æˆ·è¿›ç¨‹å’Œæ–‡ä»¶ä¹‹é—´çš„è”ç³»ï¼Œ2.è€ƒè™‘æ˜¯å¦å†™å›æ–‡ä»¶
+    // ¹Ø±ÕÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃû£º1.³·ÏúÖ÷´æÖĞµÄÄ¿Â¼ĞÅÏ¢£¬²¢ÊÍ·ÅÓÃ»§½ø³ÌºÍÎÄ¼şÖ®¼äµÄÁªÏµ£¬2.¿¼ÂÇÊÇ·ñĞ´»ØÎÄ¼ş
     void closeFile(string name)
     {
     }
 };
 
+// ÏÔÊ¾²Ù×÷²Ëµ¥
+void showMenu()
+{
+    cout << "1.´ò¿ªÎÄ¼ş¼Ğ" << endl;
+    cout << "2.´´½¨ÎÄ¼ş¼Ğ" << endl;
+    cout << "3.´´½¨ÎÄ¼ş" << endl;
+    cout << "4.É¾³ıÎÄ¼ş" << endl;
+    cout << "5.´ò¿ªÎÄ¼ş" << endl;
+    cout << "6.¹Ø±ÕÎÄ¼ş" << endl;
+    cout << "7.µ÷Õû²Ù×÷È¨ÏŞ" << endl;
+    cout << "8.ÏÔÊ¾²Ù×÷²Ëµ¥" << endl;
+    cout << "9.ÍË³ö" << endl;
+}
+
 int main()
 {
+    FileSystem myFileSys(1024, 64, 8);
 
+    cout << "ÎÄ¼şÏµÍ³ÒÑ¿ªÊ¼ÔËĞĞ" << endl;
+    cout << "ÇëÉèÖÃÃÜÂë£º";
+    myFileSys.setPassword();
+
+    showMenu();
+
+    while (1)
+    {
+        string stmp;
+        char ctmp;
+        int itmp;
+
+        cout << "ÇëÊäÈëÖ¸Áî£º";
+        cin >> ctmp;
+
+        cin.ignore();
+
+        switch (ctmp)
+        {
+        case '1':
+            cout << "( /x Îª¾ø¶ÔÂ·¾¶, ./xÎª µ±Ç°Ä¿Â¼, ../x ÎªÉÏÒ»¼¶Ä¿Â¼ )" << endl;
+            cout << "ÇëÊäÈëÎÄ¼ş¼ĞÂ·¾¶£º";
+            getline(cin, stmp);
+            myFileSys.openFolder(stmp);
+            myFileSys.showThisFolder(); // ÏÔÊ¾µ±Ç°ÎÄ¼ş¼ĞÄÚÈİ
+            break;
+        case '2':
+            cout << "ÇëÊäÈë´´½¨µÄÎÄ¼ş¼ĞÃû³Æ£º";
+            getline(cin, stmp);
+            myFileSys.createFolder(stmp);
+            break;
+        case '3':
+            cout << "ÇëÊäÈë´´½¨µÄÎÄ¼şÃû³Æ£º";
+            getline(cin, stmp);
+            cout << "ÇëÊäÈë±£»¤µÈ¼¶£º";
+            cin >> itmp;
+            myFileSys.createFile(stmp, 0, itmp);
+            break;
+        case '4':
+            cout << "ÇëÊäÈëÉ¾³ıµÄÎÄ¼şÃû³Æ£º";
+            getline(cin, stmp);
+            myFileSys.deleteFile(stmp);
+            break;
+        case '5':
+            cout << "ÇëÊäÈë´ò¿ªµÄÎÄ¼şÃû³Æ£º";
+            getline(cin, stmp);
+            myFileSys.openFile(stmp);
+            break;
+        case '6':
+            cout << "ÇëÊäÈë¹Ø±ÕµÄÎÄ¼şÃû³Æ£º";
+            getline(cin, stmp);
+            myFileSys.closeFile(stmp);
+            break;
+        case '7':
+            cout << "ÇëÊäÈëÃÜÂë£º";
+            getline(cin, stmp);
+            myFileSys.adjustAuthority(stmp);
+            break;
+        case '8':
+            showMenu();
+            break;
+        case '9':
+            system("pause");
+            return 0;
+        default:
+            cout << "ÊäÈë´íÎó£¬ÇëÖØĞÂÊäÈë" << endl;
+            break;
+        }
+    }
+
+    cout << "³ÌĞòÒì³£ÍË³ö!!!" << endl;
+    system("pause");
     return 0;
 }
