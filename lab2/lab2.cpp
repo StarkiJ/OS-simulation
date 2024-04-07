@@ -48,14 +48,6 @@ public:
         dirty = false;
     }
 
-    /*void init()
-    {
-        frameNumber = -1;
-        access = -1;
-        valid = false;
-        dirty = false;
-    }*/
-
     void update(Operation op, int i) // 更新页表项
     {
         valid = true;
@@ -154,16 +146,6 @@ void createPageTable(vector<vector<int>> &externalMemory, vector<PageTableItem> 
         pageTable.push_back(item);
     }
 }
-
-// 初始化页表
-/*void initPageTable(vector<PageTableItem> &pageTable)
-{
-    int len = pageTable.size();
-    for (int i = 0; i < len; i++)
-    {
-        pageTable[i].init();
-    }
-}*/
 
 // 显示物理页
 void showPhyicalPage(vector<PageTableItem> &PageTable, int phyNum, bool ifclock)
