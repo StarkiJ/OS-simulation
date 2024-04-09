@@ -15,6 +15,7 @@ class Operation
 public:
     int logicalAddress; // 逻辑地址
     int op;             // 操作
+    int data;           // 数据
 
     Operation()
     {
@@ -25,7 +26,8 @@ public:
     void print()
     {
         cout << left << "|" << setw(10) << logicalAddress
-             << "|" << setw(10) << (op == read ? "read" : "write") << endl;
+             << "|" << setw(10) << (op == read ? "read" : "write")
+             << "|" << setw(10) << (op == write ? data : -1) << endl;
     }
 };
 
@@ -48,10 +50,9 @@ public:
         dirty = false;
     }
 
-    void update(Operation op, int i) // 更新页表项
+    void update(Operation op) // 更新页表项
     {
         valid = true;
-        // access = i;
         if (op.op == write)
         {
             dirty = true;
@@ -100,7 +101,7 @@ bool readEM(vector<vector<int>> &externalMemory, int pageSize)
 }
 
 // 读取存储的操作序列
-bool readFile(vector<Operation> &operations)
+bool readFile(vector<Operation> &operations, int pageSize)
 {
     ifstream ifs;
     ifs.open("lab2.txt", ios::in);
@@ -121,18 +122,40 @@ bool readFile(vector<Operation> &operations)
 
     cout << "读取操作信息" << endl;
     cout << left << "|" << setw(10) << "逻辑地址"
-         << "|" << setw(10) << "操作类型" << endl;
+         << "|" << setw(10) << "操作类型"
+         << "|" << setw(10) << "数据" << endl;
 
     while (!ifs.eof())
     {
         Operation op;
         ifs >> op.logicalAddress >> op.op;
+        if (op.op == 1)
+        {
+            int data;
+            ifs >> op.data;
+        }
         op.print();
         operations.push_back(op);
     }
 
     ifs.close();
     return 1;
+}
+
+// 显示存储信息
+void showMemory(vector<vector<int>> &memory)
+{
+    int len = memory.size();
+    cout << "显示外存：" << endl;
+    for (int i = 0; i < len; i++)
+    {
+        for (int j = 0; j < memory[i].size(); j++)
+        {
+            cout << left << setw(4) << memory[i][j];
+        }
+        cout << endl;
+    }
+    cout << endl;
 }
 
 // 建立页表
@@ -191,7 +214,8 @@ void firstInFirstOut(vector<vector<int>> &externalMemory, vector<Operation> &ope
         int pageNum = op.logicalAddress / pageSize; // 页号
         int offset = op.logicalAddress % pageSize;  // 页内偏移
 
-        cout << "操作：" << op.logicalAddress << " " << (op.op == read ? "read" : "write") << endl;
+        cout << "操作：";
+        op.print();
         cout << "页号：" << pageNum << " 偏移：" << offset << endl;
 
         if (pageNum >= ptlen)
@@ -210,8 +234,8 @@ void firstInFirstOut(vector<vector<int>> &externalMemory, vector<Operation> &ope
 
             if (physicalPage.size() < phyNum) // 物理页没装满
             {
+                item.frameNumber = physicalPage.size();
                 physicalPage.push_back(externalMemory[item.address]);
-                item.frameNumber = physicalPage.size() - 1;
             }
             else // 物理页已装满
             {
@@ -252,7 +276,12 @@ void firstInFirstOut(vector<vector<int>> &externalMemory, vector<Operation> &ope
             cout << "命中：在内存中" << endl;
         }
 
-        item.update(op, i); // 更新页表
+        if (op.op == write)
+        {
+            physicalPage[item.frameNumber][offset] = op.data;
+        }
+
+        item.update(op); // 更新页表
         pageTable[pageNum] = item;
 
         cout << "物理地址：" << item.frameNumber << offset << endl;
@@ -303,8 +332,8 @@ void leastRecentlyUsed(vector<vector<int>> &externalMemory, vector<Operation> &o
 
             if (physicalPage.size() < phyNum) // 物理页没装满
             {
+                item.frameNumber = physicalPage.size();
                 physicalPage.push_back(externalMemory[item.address]);
-                item.frameNumber = physicalPage.size() - 1;
             }
             else // 物理页已装满
             {
@@ -343,8 +372,13 @@ void leastRecentlyUsed(vector<vector<int>> &externalMemory, vector<Operation> &o
             cout << "命中：在内存中" << endl;
         }
 
+        if (op.op == write)
+        {
+            physicalPage[item.frameNumber][offset] = op.data;
+        }
+
         item.access = i;
-        item.update(op, i); // 更新页表
+        item.update(op); // 更新页表
         pageTable[pageNum] = item;
 
         cout << "物理地址：" << item.frameNumber << offset << endl;
@@ -396,8 +430,8 @@ void clock(vector<vector<int>> &externalMemory, vector<Operation> &operations, i
 
             if (physicalPage.size() < phyNum) // 物理页没装满
             {
+                item.frameNumber = physicalPage.size();
                 physicalPage.push_back(externalMemory[item.address]);
-                item.frameNumber = physicalPage.size() - 1;
                 ptr = (ptr + 1) % phyNum; // 替换指针后移
             }
             else // 物理页已装满
@@ -442,8 +476,13 @@ void clock(vector<vector<int>> &externalMemory, vector<Operation> &operations, i
             cout << "命中：在内存中" << endl;
         }
 
+        if (op.op == write)
+        {
+            physicalPage[item.frameNumber][offset] = op.data;
+        }
+
         item.access = 1;
-        item.update(op, i); // 更新页表
+        item.update(op); // 更新页表
         pageTable[pageNum] = item;
 
         cout << "物理地址：" << item.frameNumber << offset << endl;
@@ -497,8 +536,8 @@ void randomReplace(vector<vector<int>> &externalMemory, vector<Operation> &opera
 
             if (physicalPage.size() < phyNum) // 物理页没装满
             {
+                item.frameNumber = physicalPage.size();
                 physicalPage.push_back(externalMemory[item.address]);
-                item.frameNumber = physicalPage.size() - 1;
             }
             else // 物理页已装满
             {
@@ -532,7 +571,12 @@ void randomReplace(vector<vector<int>> &externalMemory, vector<Operation> &opera
             cout << "命中：在内存中" << endl;
         }
 
-        item.update(op, i); // 更新页表
+        if (op.op == write)
+        {
+            physicalPage[item.frameNumber][offset] = op.data;
+        }
+
+        item.update(op); // 更新页表
         pageTable[pageNum] = item;
 
         cout << "物理地址：" << item.frameNumber << offset << endl;
@@ -549,11 +593,14 @@ int main()
     vector<Operation> operations;       // 操作序列
     vector<vector<int>> externalMemory; // 外存
 
-    if (readEM(externalMemory, 8)) // 读取外存
+    int pageSize = 8;
+    int phyNum = 3;
+
+    if (readEM(externalMemory, pageSize)) // 读取外存
     {
         cout << "读取外存成功" << endl;
 
-        if (readFile(operations))
+        if (readFile(operations, pageSize))
         {
 
             cout << "读取操作成功" << endl;
@@ -572,20 +619,22 @@ int main()
                 switch (choice)
                 {
                 case 1:
-                    firstInFirstOut(externalMemory, operations, 3);
+                    firstInFirstOut(externalMemory, operations, phyNum);
                     break;
                 case 2:
-                    leastRecentlyUsed(externalMemory, operations, 3);
+                    leastRecentlyUsed(externalMemory, operations, phyNum);
                     break;
                 case 3:
-                    clock(externalMemory, operations, 3);
+                    clock(externalMemory, operations, phyNum);
                     break;
                 case 4:
-                    randomReplace(externalMemory, operations, 3);
+                    randomReplace(externalMemory, operations, phyNum);
                     break;
                 default:
                     cout << "输入错误" << endl;
                 }
+
+                showMemory(externalMemory);
 
                 cout << "是否重新选择算法？(y: 重新选择, n: 结束程序)" << endl;
                 char c;
