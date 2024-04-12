@@ -421,11 +421,12 @@ public:
         {
             return false;
         }
-
         if (ifIllegal(curFile->protection)) // 判断权限
         {
             return false;
         }
+
+        tmpFile = &memFiles[num];
 
         if (memFiles[num].memLoc != -1) // 文件已经打开
         {
@@ -466,14 +467,16 @@ public:
             int used = spaceBlocks.blocks[location].used;  // 外存块已分配空间
             int memAddr = memBlocks.blocks[memLoc].start;  // 内存地址
 
-            memBlocks.blocks[memLoc].used == used; // 更新内存块已分配空间
+            memBlocks.blocks[memLoc].used = used; // 更新内存块已分配空间
 
             for (int j = 0; j < used - 1; j++)
             {
-                cout << space[addr] << " ";
                 memory[memAddr++] = space[addr++];
             }
-            cout << endl;
+            if (0 < used && used < blockSize)
+            {
+                memory[memAddr] = space[addr];
+            }
 
             if (used == blockSize) // 块已满则需要在块末存储下一个块的块号
             {
@@ -483,7 +486,11 @@ public:
 
             location = space[addr]; // 获取下一个外存块号
         }
+
+        tmpFile->size = size;
+
         cout << "读文件成功：" << name << "(" << curFile->id << ")" << endl;
+        showMemFile();
 
         return true;
     }
@@ -608,17 +615,16 @@ public:
         {
             return false;
         }
+        if (ifIllegal(curFile->protection))
+        {
+            return false;
+        }
 
         tmpFile = &memFiles[num];
 
         if (tmpFile->memLoc == -1)
         {
             cout << "文件还未读取到内存中" << endl;
-            return false;
-        }
-
-        if (ifIllegal(curFile->protection))
-        {
             return false;
         }
 
@@ -645,10 +651,11 @@ public:
                 if (memBlocks.blocks[memLoc].used == 0)
                 {
                     cout << "文件已空" << endl;
-                    return false;
+                    break;;
                 }
                 cout << "请输入要删除长度：" << endl;
                 cin >> stmp;
+                cin.ignore();
                 for (int i = 0; i < stmp.length(); i++)
                 {
                     ctmp = stmp[i];
@@ -703,7 +710,7 @@ public:
                 }
                 cout << "请输入要插入的内容：";
                 getline(cin, stmp);
-                writeC(memLoc, line, column, stmp);
+                writeI(memLoc, line, column, stmp);
                 break;
             case 'Q':
             case 'q':
@@ -736,7 +743,7 @@ public:
 
         if (tmpFile->dirty)
         {
-            cout << "文件有改动，是否保存(Y/N)？" << endl;
+            cout << "文件有改动，是否保存(Y/N)：";
             string stmp;
             getline(cin, stmp);
             if (stmp[0] == 'Y' || stmp[0] == 'y')
@@ -749,48 +756,44 @@ public:
                     return false;
                 }
 
-                int location = curFile->location;              // 获取文件在磁盘中的位置
-                int addr = spaceBlocks.blocks[location].start; // 外存地址
+                int location = curFile->location;        // 获取文件在磁盘中的位置
+                while (!spaceBlocks.freeBlock(location)) // 反正也是要全部重写一遍，不如整个重装，还能均衡损耗
+                {
+                    location = space[location * blockSize + blockSize - 1];
+                }
+
+                location = spaceBlocks.findFreeBlock(); // 取出空闲块
+                curFile->location = location;
 
                 for (int i = 0; i < size; i++)
                 {
-                    int used = memBlocks.blocks[memLoc].used;     // 内存块已分配空间
-                    int memAddr = memBlocks.blocks[memLoc].start; // 内存地址
+                    int addr = spaceBlocks.blocks[location].start; // 外存地址
+                    int used = memBlocks.blocks[memLoc].used;      // 内存块已分配空间
+                    int memAddr = memBlocks.blocks[memLoc].start;  // 内存地址
 
-                    if (i > curFile->size) // 超出原文件大小，需要分配新的外存块
-                    {
-                        location = spaceBlocks.free.back(); // 取出空闲块
-                        spaceBlocks.free.pop_back();
-
-                        space[addr] = location; // 最后一位用于存储下一个块号
-
-                        spaceBlocks.blocks[location].used = used;
-                    }
-                    else // 在原文件大小内，进入下一个块
-                    {
-                        location = space[addr];
-                    }
-
-                    addr = spaceBlocks.blocks[location].start; // 更新外存起始地址
+                    spaceBlocks.blocks[location].used = used; // 更新已分配空间
 
                     for (int j = 0; j < used - 1; j++)
                     {
                         space[addr++] = memory[memAddr++]; // 存储数据
                     }
+                    if (0 < used && used < blockSize)
+                    {
+                        space[addr] = memory[memAddr];
+                    }
+
+                    if (used == blockSize) // 块已满则需要在块末存储下一个块的块号
+                    {
+                        location = spaceBlocks.findFreeBlock(); // 取出空闲块
+                        space[addr] = location;                 // 最后一位存储下一个块号
+                    }
 
                     memLoc = memory[memAddr]; // 获取下一个内存块号
                 }
 
-                if (size < curFile->size)
-                {
-                    location = space[location * blockSize + blockSize - 1];
-                    while (!spaceBlocks.freeBlock(location))
-                    {
-                        location = space[location * blockSize + blockSize - 1];
-                    }
-                }
-
                 curFile->size = size; // 更新文件大小
+
+                cout << "写回文件成功" << endl;
             }
         }
 
@@ -805,7 +808,7 @@ public:
 
         // 从打开文件表中删除
         memFiles.erase(memFiles.begin() + num);
-        
+
         return true;
     }
 
