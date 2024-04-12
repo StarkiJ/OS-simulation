@@ -2,37 +2,38 @@
 
 class FileSystem
 {
-    string password; // å¯†ç 
-    int authority;   // æƒé™çº§åˆ«
+    string password; // ÃÜÂë
+    int authority;   // È¨ÏŞ¼¶±ğ
 
-    vector<int> space;  // å¤–å­˜ç©ºé—´
-    vector<int> memory; // å†…å­˜
+    int blockSize;  // ¿é´óĞ¡
+    int numOfFiles; // ÀúÊ·ÎÄ¼şÊıÁ¿(°üº¬É¾³ıÎÄ¼ş)
 
-    vector<File *> openFiles; // å†…å­˜æ‰“å¼€æ–‡ä»¶è¡¨
+    vector<char> space;  // Íâ´æ¿Õ¼ä
+    vector<char> memory; // ÄÚ´æ
 
-    Blocks spaceBlocks; // å¤–å­˜ç©ºé—´å—
-    Blocks memBlocks;   // å†…å­˜å—
+    vector<MemFile> memFiles; // ÄÚ´æÎÄ¼ş¼¯ºÏ
 
-    int blockSize;  // å—å¤§å°
-    int numOfFiles; // å†å²æ–‡ä»¶æ•°é‡(åŒ…å«åˆ é™¤æ–‡ä»¶)
+    Blocks spaceBlocks; // Íâ´æ¿Õ¼ä¿é
+    Blocks memBlocks;   // ÄÚ´æ¿é
 
-    Folder root;       // æ ¹ç›®å½•
-    Folder *curFolder; // å½“å‰æ–‡ä»¶å¤¹æŒ‡é’ˆ
-    string curPath;    // å½“å‰è·¯å¾„
+    Folder root;       // ¸ùÄ¿Â¼
+    Folder *curFolder; // µ±Ç°ÎÄ¼ş¼ĞÖ¸Õë
+    string curPath;    // µ±Ç°Â·¾¶
 
-    File *curFile; // å½“å‰æ–‡ä»¶æŒ‡é’ˆ
+    File *curFile;    // µ±Ç°ÎÄ¼şÖ¸Õë
+    MemFile *tmpFile; // µ±Ç°ÄÚ´æÎÄ¼şÖ¸Õë
 
 public:
     FileSystem(int sizeOfSpace, int sizeOfMemory, int blockSize)
     {
         password = "admin";
-        authority = 1;
-
-        space = vector<int>(sizeOfSpace, -1);
-        memory = vector<int>(sizeOfMemory, -1);
+        authority = 2;
 
         this->blockSize = blockSize;
         numOfFiles = 0;
+
+        space = vector<char>(sizeOfSpace, 'n');
+        memory = vector<char>(sizeOfMemory, 'n');
 
         spaceBlocks = Blocks(sizeOfSpace, blockSize);
         memBlocks = Blocks(sizeOfMemory, blockSize);
@@ -42,51 +43,71 @@ public:
         curPath = "root:";
     }
 
-    // è®¾ç½®å¯†ç 
+    // ÉèÖÃÃÜÂë
     void setPassword()
     {
+        cout << "ÇëÉèÖÃÃÜÂë£º";
         getline(cin, password);
     }
 
-    // è°ƒæ•´æ“ä½œæƒé™
+    // ¹ÜÀíÔ±½çÃæ
     void adjustAuthority(string word)
     {
         if (word != password)
         {
-            cout << "å¯†ç é”™è¯¯" << endl;
+            cout << "ÃÜÂë´íÎó" << endl;
             return;
         }
 
-        cout << "è¯·é€‰æ‹©æƒé™çº§åˆ«ï¼š" << endl;
-        cout << "0.æ¸¸å®¢æƒé™" << endl;
-        cout << "1.ç”¨æˆ·æƒé™" << endl;
-        cout << "2.ç®¡ç†å‘˜æƒé™" << endl;
-        cin >> authority;
+        cout << "0.ÓÎ¿ÍÈ¨ÏŞ" << endl;
+        cout << "1.ÓÃ»§È¨ÏŞ" << endl;
+        cout << "2.¹ÜÀíÔ±È¨ÏŞ" << endl;
+        cout << "3.ĞŞ¸ÄÃÜÂë" << endl;
+        cout << "ÇëÑ¡ÔñÈ¨ÏŞ¼¶±ğ£º";
+        int itmp;
+        while (1)
+        {
+            cin >> itmp;
+            if (itmp < 0 || itmp > 3)
+            {
+                cout << "ÊäÈë´íÎó£¬ÇëÖØĞÂÊäÈë£¡" << endl;
+            }
+            if (itmp == 3)
+            {
+                setPassword();
+                break;
+            }
+            else
+            {
+                authority = itmp;
+                break;
+            }
+        }
     }
 
-    // åˆ¤æ–­æ˜¯å¦è¿è§„
+    // ÅĞ¶ÏÊÇ·ñÎ¥¹æ
     bool ifIllegal(int limit)
     {
         if (authority < limit)
         {
-            cout << "æƒé™ä¸è¶³" << endl;
+            cout << "È¨ÏŞ²»×ã" << endl;
             return true;
         }
         return false;
     }
 
-    // æ˜¾ç¤ºå½“å‰è·¯å¾„
+    // ÏÔÊ¾µ±Ç°Â·¾¶
     void showPath()
     {
-        cout << "å½“å‰è·¯å¾„ï¼š" << curPath << endl;
+        cout << "µ±Ç°Â·¾¶£º" << curPath << endl;
     }
 
-    // æ˜¾ç¤ºå½“å‰æ–‡ä»¶å¤¹å†…å®¹
+    // ÏÔÊ¾µ±Ç°ÎÄ¼ş¼ĞÄÚÈİ
     void showThisFolder()
     {
         showPath();
 
-        cout << "æ–‡ä»¶å¤¹ï¼š";
+        cout << "ÎÄ¼ş¼Ğ£º";
         int size = curFolder->folders.size();
         for (int i = 0; i < size; i++)
         {
@@ -94,7 +115,7 @@ public:
         }
         cout << endl;
 
-        cout << "æ–‡ä»¶ï¼š";
+        cout << "ÎÄ¼ş£º";
         size = curFolder->files.size();
         for (int i = 0; i < size; i++)
         {
@@ -103,7 +124,7 @@ public:
         cout << endl;
     }
 
-    // åˆ›å»ºæ–‡ä»¶å¤¹
+    // ´´½¨ÎÄ¼ş¼Ğ
     bool createFolder(string name, int protection)
     {
         if (ifIllegal(1))
@@ -111,29 +132,30 @@ public:
             return false;
         }
 
-        // åˆ¤æ–­æ–‡ä»¶å¤¹åå­—æ˜¯å¦é‡å¤
+        // ÅĞ¶ÏÎÄ¼ş¼ĞÃû×ÖÊÇ·ñÖØ¸´
         if (curFolder->findFolder(name) != -1)
         {
-            cout << "åˆ›å»ºæ–‡ä»¶å¤¹å¤±è´¥ï¼Œæ–‡ä»¶å¤¹å·²å­˜åœ¨" << endl;
+            cout << "´´½¨ÎÄ¼ş¼ĞÊ§°Ü£¬ÎÄ¼ş¼ĞÒÑ´æÔÚ" << endl;
             return false;
         }
         Folder newFolder(name, protection);
         curFolder->folders.push_back(newFolder);
 
-        cout << "åˆ›å»ºæ–‡ä»¶å¤¹æˆåŠŸï¼š" << curPath << "/" << name << endl;
+        cout << "´´½¨ÎÄ¼ş¼Ğ³É¹¦£º" << curPath << "/" << name << endl;
+
         return true;
     }
 
-    // æ‰“å¼€æ–‡ä»¶å¤¹
+    // ´ò¿ªÎÄ¼ş¼Ğ
     bool openFolder(string path)
     {
-        string name = "";              // æ–‡ä»¶å¤¹çš„åå­—
-        string tmpPath = curPath;      // ä¸´æ—¶è·¯å¾„
-        Folder *tmpFolder = curFolder; // ä¸´æ—¶æ–‡ä»¶å¤¹æŒ‡é’ˆ
-        int len = path.length();       // è·¯å¾„é•¿åº¦
+        string name = "";              // ÎÄ¼ş¼ĞµÄÃû×Ö
+        string tmpPath = curPath;      // ÁÙÊ±Â·¾¶
+        Folder *tmpFolder = curFolder; // ÁÙÊ±ÎÄ¼ş¼ĞÖ¸Õë
+        int len = path.length();       // Â·¾¶³¤¶È
 
-        // é˜²æ­¢è¾“å…¥è·¯å¾„ä¸­å¸¦æœ‰"root:"
-        if (path.substr(0, 5) == "root:") // é˜²æ­¢è¾“å…¥è·¯å¾„ä¸­å¸¦æœ‰"root:"
+        // ·ÀÖ¹ÊäÈëÂ·¾¶ÖĞ´øÓĞ"root:"
+        if (path.substr(0, 5) == "root:") // ·ÀÖ¹ÊäÈëÂ·¾¶ÖĞ´øÓĞ"root:"
         {
             if (len == 5)
             {
@@ -143,10 +165,10 @@ public:
             len = path.length();
         }
 
-        // åˆ¤æ–­è·¯å¾„æ ¼å¼
-        if (path[0] == '/') // ç»å¯¹è·¯å¾„
+        // ÅĞ¶ÏÂ·¾¶¸ñÊ½
+        if (path[0] == '/') // ¾ø¶ÔÂ·¾¶
         {
-            if (path == "/") // ç‰¹æ®Šæƒ…å†µï¼Œé˜²æ­¢"/"å åŠ 
+            if (path == "/") // ÌØÊâÇé¿ö£¬·ÀÖ¹"/"µş¼Ó
             {
                 tmpPath = "root:";
             }
@@ -156,7 +178,7 @@ public:
             }
             curFolder = &root;
         }
-        else if (path.substr(0, 2) == "./") // ç›¸å¯¹è·¯å¾„ï¼šå½“å‰ç›®å½•
+        else if (path.substr(0, 2) == "./") // Ïà¶ÔÂ·¾¶£ºµ±Ç°Ä¿Â¼
         {
             if (path != "./")
             {
@@ -164,30 +186,30 @@ public:
             }
             else
             {
-                cout << "??? åŸåœ°TP ???" << endl;
+                cout << "??? Ô­µØTP ???" << endl;
                 return false;
             }
         }
-        else if (path.substr(0, 3) == "../") // ç›¸å¯¹è·¯å¾„ï¼šä¸Šä¸€çº§ç›®å½•
+        else if (path.substr(0, 3) == "../") // Ïà¶ÔÂ·¾¶£ºÉÏÒ»¼¶Ä¿Â¼
         {
             if (curPath == "root:")
             {
-                cout << "æ‰“å¼€æ–‡ä»¶å¤¹å¤±è´¥ï¼Œæ ¹ç›®å½•æ²¡æœ‰çˆ¶æ–‡ä»¶å¤¹" << endl;
+                cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬¸ùÄ¿Â¼Ã»ÓĞ¸¸ÎÄ¼ş¼Ğ" << endl;
                 return false;
             }
 
-            int curlen = curPath.length(); // å½“å‰è·¯å¾„é•¿åº¦
+            int curlen = curPath.length(); // µ±Ç°Â·¾¶³¤¶È
             for (int i = curlen; i > 0; i--)
             {
                 if (curPath[i] == '/')
                 {
                     if (!openFolder(curPath.substr(0, i)))
                     {
-                        cout << "æ‰“å¼€æ–‡ä»¶å¤¹å¤±è´¥ï¼Œçˆ¶æ–‡ä»¶å¤¹è·¯å¾„é”™è¯¯" << endl;
+                        cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬¸¸ÎÄ¼ş¼ĞÂ·¾¶´íÎó" << endl;
                         return false;
                     }
 
-                    if (path == "../") // ç‰¹æ®Šæƒ…å†µ
+                    if (path == "../") // ÌØÊâÇé¿ö
                     {
                         tmpPath = curPath.substr(0, i);
                     }
@@ -201,25 +223,25 @@ public:
         }
         else
         {
-            cout << "æ‰“å¼€æ–‡ä»¶å¤¹å¤±è´¥ï¼Œè·¯å¾„è¾“å…¥é”™è¯¯ï¼" << endl;
+            cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬Â·¾¶ÊäÈë´íÎó£¡" << endl;
             return false;
         }
 
-        // éå†è·¯å¾„ï¼Œå¯»æ‰¾ç›®æ ‡æ–‡ä»¶å¤¹
+        // ±éÀúÂ·¾¶£¬Ñ°ÕÒÄ¿±êÎÄ¼ş¼Ğ
         for (int i = 0; i < len; i++)
         {
-            if (path[i] == '.') // è·³è¿‡ç‚¹
+            if (path[i] == '.') // Ìø¹ıµã
             {
                 continue;
             }
-            if (path[i] != '/') // æ˜¯åå­—
+            if (path[i] != '/') // ÊÇÃû×Ö
             {
                 name += path[i];
-                if (i != len - 1) // æœ€åä¸€ä¸ªæ²¡æœ‰'/'ç»“å°¾
+                if (i != len - 1) // ×îºóÒ»¸öÃ»ÓĞ'/'½áÎ²
                 {
                     continue;
                 }
-                i++; // é˜²æ­¢æœ€åä¸€ä½æ— æ³•è¾“å‡º
+                i++; // ·ÀÖ¹×îºóÒ»Î»ÎŞ·¨Êä³ö
             }
 
             if (name != "")
@@ -227,15 +249,15 @@ public:
                 int index = curFolder->findFolder(name);
                 if (index == -1)
                 {
-                    cout << "æ‰“å¼€æ–‡ä»¶å¤¹å¤±è´¥ï¼Œæ²¡æœ‰æ‰¾åˆ°æ–‡ä»¶å¤¹: " << path.substr(0, i) << endl;
-                    curFolder = tmpFolder; // å›é€€æ–‡ä»¶å¤¹æŒ‡é’ˆ
+                    cout << "´ò¿ªÎÄ¼ş¼ĞÊ§°Ü£¬Ã»ÓĞÕÒµ½ÎÄ¼ş¼Ğ: " << path.substr(0, i) << endl;
+                    curFolder = tmpFolder; // »ØÍËÎÄ¼ş¼ĞÖ¸Õë
                     return false;
                 }
                 curFolder = &curFolder->folders[index];
 
-                if (ifIllegal(curFolder->protection)) // åˆ¤æ–­æƒé™
+                if (ifIllegal(curFolder->protection)) // ÅĞ¶ÏÈ¨ÏŞ
                 {
-                    curFolder = tmpFolder; // å›é€€æ–‡ä»¶å¤¹æŒ‡é’ˆ
+                    curFolder = tmpFolder; // »ØÍËÎÄ¼ş¼ĞÖ¸Õë
                     return false;
                 }
 
@@ -243,12 +265,12 @@ public:
             }
         }
 
-        curPath = tmpPath; // æ›´æ–°è·¯å¾„
+        curPath = tmpPath; // ¸üĞÂÂ·¾¶
 
         return true;
     }
 
-    // åˆ›å»ºæ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åã€æ ‡è¯†ç¬¦ã€ç±»å‹ã€ä½ç½®ã€å¤§å°ã€ä¿æŠ¤å±æ€§ï¼š1.åˆ†é…ç©ºé—´ï¼Œ2.å»ºç«‹ç›®å½•é¡¹
+    // ´´½¨ÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃû¡¢±êÊ¶·û¡¢ÀàĞÍ¡¢Î»ÖÃ¡¢´óĞ¡¡¢±£»¤ÊôĞÔ£º1.·ÖÅä¿Õ¼ä£¬2.½¨Á¢Ä¿Â¼Ïî
     bool createFile(string name, int type, int protection)
     {
         if (ifIllegal(1))
@@ -256,25 +278,25 @@ public:
             return false;
         }
 
-        // åˆ¤æ–­æ–‡ä»¶åæ˜¯å¦é‡å¤
+        // ÅĞ¶ÏÎÄ¼şÃûÊÇ·ñÖØ¸´
         if (curFolder->findFile(name) != -1)
         {
-            cout << "åˆ›å»ºæ–‡ä»¶å¤±è´¥ï¼Œæ–‡ä»¶å·²å­˜åœ¨" << endl;
+            cout << "´´½¨ÎÄ¼şÊ§°Ü£¬ÎÄ¼şÒÑ´æÔÚ" << endl;
             return false;
         }
 
-        // åˆ¤æ–­ç©ºé—´æ˜¯å¦è¶³å¤Ÿ
+        // ÅĞ¶Ï¿Õ¼äÊÇ·ñ×ã¹»
         int location = spaceBlocks.findFreeBlock();
         if (location == -1)
         {
-            cout << "åˆ›å»ºæ–‡ä»¶å¤±è´¥ï¼Œç©ºé—´ä¸è¶³" << endl;
+            cout << "´´½¨ÎÄ¼şÊ§°Ü£¬¿Õ¼ä²»×ã" << endl;
             return false;
         }
 
         File newFile(name, numOfFiles, type, location, protection);
         curFolder->files.push_back(newFile);
 
-        cout << "åˆ›å»ºæ–‡ä»¶æˆåŠŸï¼š" << curPath << "/" << name << "(" << numOfFiles << ") ";
+        cout << "´´½¨ÎÄ¼ş³É¹¦£º" << curPath << "/" << name << "(" << numOfFiles << ")  ";
         cout << ctime(&newFile.updatetime) << endl;
 
         numOfFiles++;
@@ -282,113 +304,518 @@ public:
         return true;
     }
 
-    // æ‰“å¼€æ–‡ä»¶ï¼š1.å°†ç›®å½•ä¿¡æ¯è¯»å…¥å†…å­˜æ‰“å¼€æ–‡ä»¶è¡¨ä¸­ï¼Œå»ºç«‹èµ·ç”¨æˆ·è¿›ç¨‹å’Œæ–‡ä»¶ä¹‹é—´çš„è”ç³»ã€‚
+    // ´ò¿ªÎÄ¼ş£º1.½«Ä¿Â¼ĞÅÏ¢¶ÁÈëÄÚ´æ´ò¿ªÎÄ¼ş±íÖĞ£¬½¨Á¢ÆğÓÃ»§½ø³ÌºÍÎÄ¼şÖ®¼äµÄÁªÏµ¡£
     bool openFile(string name)
     {
         int index = curFolder->findFile(name);
         if (index == -1)
         {
-            cout << "æ‰“å¼€æ–‡ä»¶å¤±è´¥ï¼Œæ²¡æœ‰æ‰¾åˆ°æ–‡ä»¶" << endl;
+            cout << "´ò¿ªÎÄ¼şÊ§°Ü£¬Ã»ÓĞÕÒµ½ÎÄ¼ş" << endl;
             return false;
         }
         curFile = &curFolder->files[index];
         int id = curFile->id;
 
-        // æ£€æµ‹æ–‡ä»¶æ˜¯å¦å·²ç»æ‰“å¼€
-        int size = openFiles.size();
+        // ¼ì²âÎÄ¼şÊÇ·ñÒÑ¾­´ò¿ª
+        int size = memFiles.size();
         for (int i = 0; i < size; i++)
         {
-            if (openFiles[i]->id == id)
+            if (memFiles[i].file->id == id)
             {
-                cout << "æ‰“å¼€æ–‡ä»¶å¤±è´¥ï¼Œæ–‡ä»¶å·²æ‰“å¼€è¿‡" << endl;
+                cout << "´ò¿ªÎÄ¼şÊ§°Ü£¬ÎÄ¼şÒÑ´ò¿ª¹ı" << endl;
                 return false;
             }
         }
 
-        openFiles.push_back(curFile); // å°†ç›®å½•ä¿¡æ¯è¯»å…¥å†…å­˜æ‰“å¼€æ–‡ä»¶è¡¨
-        cout << "æ‰“å¼€æ–‡ä»¶æˆåŠŸï¼š" << curPath << "/" << name << "(" << id << ")" << endl;
+        memFiles.push_back(MemFile(curFile, -1)); // ½«Ä¿Â¼ĞÅÏ¢¶ÁÈëÄÚ´æ´ò¿ªÎÄ¼ş±í
+        cout << "´ò¿ªÎÄ¼ş³É¹¦£º" << curPath << "/" << name << "(" << id << ")" << endl;
 
         return true;
     }
 
-    // è¯»æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åå’Œè¦è¯»å…¥æ–‡ä»¶å—çš„å†…å­˜ä½ç½®ï¼š1.åœ¨ç›®å½•ä¸­æœç´¢ï¼Œ2.å°†æ–‡ä»¶å†…å®¹è¯»å…¥å†…å­˜
-    bool readFile(string name)
+    // ´Ó´ò¿ªÎÄ¼ş±íÖĞÑ¡ÔñÎÄ¼ş
+    int getFile(string name) // »ñÈ¡ÎÄ¼ş±àºÅ
     {
-        // ä»å†…å­˜æ‰“å¼€æ–‡ä»¶è¡¨ä¸­æ‰¾åˆ°ç›®æ ‡æ–‡ä»¶çš„ç›®å½•é¡¹
-        vector<int> index;
-        int size = openFiles.size();
+        // ´ÓÄÚ´æ´ò¿ªÎÄ¼ş±íÖĞÕÒµ½Ä¿±êÎÄ¼şµÄÄ¿Â¼Ïî
+        vector<int> indexes;
+        int num = 0; // Ä¿±êÎÄ¼şÔÚ´ò¿ªÎÄ¼ş±íÖĞµÄĞòºÅ
+
+        int size = memFiles.size();
         for (int i = 0; i < size; i++)
         {
-            if (openFiles[i]->name == name)
+            if (memFiles[i].file->name == name)
             {
-                index.push_back(i);
+                indexes.push_back(i);
             }
         }
 
-        // åˆ¤æ–­æ˜¯å¦æ‰¾åˆ°ç›®æ ‡æ–‡ä»¶ï¼Œå¦‚æœæ‰¾åˆ°äº†å¤šä¸ªåŒåæ–‡ä»¶åˆ™è¿›è¡Œé€‰æ‹©
-        if (index.size() == 0)
+        // ÅĞ¶ÏÊÇ·ñÕÒµ½Ä¿±êÎÄ¼ş£¬Èç¹ûÕÒµ½ÁË¶à¸öÍ¬ÃûÎÄ¼şÔò½øĞĞÑ¡Ôñ
+        if (indexes.size() == 0)
         {
-            cout << "è¯»æ–‡ä»¶å¤±è´¥ï¼Œæœªåœ¨å·²æ‰“å¼€æ–‡ä»¶ä¸­æ‰¾åˆ°è¯¥æ–‡ä»¶" << endl;
-            return false;
+            cout << "¶ÁÎÄ¼şÊ§°Ü£¬Î´ÔÚÒÑ´ò¿ªÎÄ¼şÖĞÕÒµ½¸ÃÎÄ¼ş" << endl;
+            return -1;
         }
-        else if (index.size() == 1)
+        else if (indexes.size() > 1)
         {
-            curFile = &curFolder->files[index[0]];
-        }
-        else
-        {
-            cout << "æ‰¾åˆ°å¤šä¸ªåŒåæ–‡ä»¶ï¼š" << name << endl;
-            for (int i = 0; i < index.size(); i++)
+            cout << "ÕÒµ½¶à¸öÍ¬ÃûÎÄ¼ş£º" << name << endl;
+            for (int i = 0; i < indexes.size(); i++)
             {
-                cout << i << ": " << openFiles[index[i]]->id << " ";
-                cout << ctime(&openFiles[index[i]]->updatetime) << endl;
+                cout << i << ": " << memFiles[indexes[i]].file->id << " ";
+                cout << ctime(&memFiles[indexes[i]].file->updatetime) << endl;
             }
-            cout << "è¯·è¾“å…¥è¦æ‰“å¼€çš„æ–‡ä»¶ç¼–å·ï¼š" << endl;
-            int num;
+            cout << "ÇëÊäÈëÄ¿±êÎÄ¼ş±àºÅ£º" << endl;
             cin >> num;
-            curFile = &curFolder->files[index[num]];
+            if (num < 0 || num >= indexes.size())
+            {
+                cout << "ÊäÈë´íÎó" << endl;
+                return -1;
+            }
         }
 
-        if (ifIllegal(curFile->protection)) // åˆ¤æ–­æƒé™
+        num = indexes[num];
+        curFile = memFiles[num].file;
+
+        return num;
+    }
+
+    // ÏÔÊ¾ÄÚ´æÖĞÎÄ¼şµÄÄÚÈİ
+    string showMemFile()
+    {
+        string stmp = "";
+        int memLoc = tmpFile->memLoc;
+        if (memLoc == -1)
         {
-            return false;
+            cout << "¸ÃÄÚ´æÎÄ¼şÎ´·ÖÅä" << endl;
+            return stmp;
         }
 
-        // è¯»å–æ–‡ä»¶ä¿¡æ¯
-        int size = curFile->size;
-        int location = curFile->location; // å—å·
-        for (int i = 0; i < curFile->size; i++)
+        cout << "ÎÄ¼şÃû£º" << tmpFile->file->name << endl;
+        for (int i = 0; i < tmpFile->size; i++)
         {
-            int num = spaceBlocks.blocks[location].start; // å¤–å­˜åœ°å€
-            int used = spaceBlocks.blocks[location].used;
+            int used = memBlocks.blocks[memLoc].used;     // ÄÚ´æ¿éÒÑ·ÖÅä¿Õ¼ä
+            int memAddr = memBlocks.blocks[memLoc].start; // ÄÚ´æµØÖ·
+            cout << i << "£º";
             for (int j = 0; j < used - 1; j++)
             {
-                cout << space[num++] << " ";
+                stmp += (char)memory[memAddr];
+                cout << (char)memory[memAddr];
+                memAddr++;
+            }
+            if (0 < used && used < blockSize)
+            {
+                stmp += (char)memory[memAddr];
+                cout << (char)memory[memAddr] << endl;
+            }
+            cout << endl;
+            memLoc = memory[memAddr]; // »ñÈ¡ÏÂÒ»¸öÄÚ´æ¿éºÅ
+        }
+
+        return stmp;
+    }
+
+    // ¶ÁÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃûºÍÒª¶ÁÈëÎÄ¼ş¿éµÄÄÚ´æÎ»ÖÃ£º1.ÔÚÄ¿Â¼ÖĞËÑË÷£¬2.½«ÎÄ¼şÄÚÈİ¶ÁÈëÄÚ´æ
+    bool readFile(string name)
+    {
+        int num = getFile(name);
+        if (num == -1)
+        {
+            return false;
+        }
+
+        if (ifIllegal(curFile->protection)) // ÅĞ¶ÏÈ¨ÏŞ
+        {
+            return false;
+        }
+
+        if (memFiles[num].memLoc != -1) // ÎÄ¼şÒÑ¾­´ò¿ª
+        {
+            showMemFile();
+            return true;
+        }
+
+        // ¶ÁÈ¡ÎÄ¼şĞÅÏ¢
+        int size = curFile->size;         // ÎÄ¼ş´óĞ¡(¿éÊı)
+        int location = curFile->location; // Íâ´æ¿éºÅ
+
+        // ÅĞ¶ÏÄÚ´æ¿Õ¼äÇé¿ö
+        if (size > memBlocks.num)
+        {
+            cout << "¶ÁÎÄ¼şÊ§°Ü£¬ÎÄ¼ş¹ı´ó£¬ÄÚ´æÉÏÏŞ²»×ã" << endl;
+            return false;
+        }
+        if (size > memBlocks.free.size())
+        {
+            cout << "¶ÁÎÄ¼şÊ§°Ü£¬ÄÚ´æÊ£Óà¿Õ¼ä²»×ã£¬Çë¹Ø±Õ²¿·ÖÎÄ¼şÒÔÊÍ·Å¿Õ¼ä" << endl;
+            return false;
+        }
+
+        cout << "ÄÚ´æ¿Õ¼ä³ä×ã£¬ÕıÔÚ¶ÁÈ¡ÎÄ¼şÊı¾İµ½ÄÚ´æ£º" << endl;
+
+        // ¶Áµ½ÄÚ´æ
+        int memLoc = memBlocks.findFreeBlock(); // È¡³ö¿ÕÏĞ¿é
+        memFiles[num].memLoc = memLoc;
+
+        if (size == 0)
+        {
+            cout << "ÎÄ¼şÎª¿Õ" << endl;
+        }
+
+        for (int i = 0; i < size; i++)
+        {
+            int addr = spaceBlocks.blocks[location].start; // Íâ´æµØÖ·
+            int used = spaceBlocks.blocks[location].used;  // Íâ´æ¿éÒÑ·ÖÅä¿Õ¼ä
+            int memAddr = memBlocks.blocks[memLoc].start;  // ÄÚ´æµØÖ·
+
+            memBlocks.blocks[memLoc].used == used; // ¸üĞÂÄÚ´æ¿éÒÑ·ÖÅä¿Õ¼ä
+
+            for (int j = 0; j < used - 1; j++)
+            {
+                cout << space[addr] << " ";
+                memory[memAddr++] = space[addr++];
             }
             cout << endl;
 
-            location = space[num];
+            if (used == blockSize) // ¿éÒÑÂúÔòĞèÒªÔÚ¿éÄ©´æ´¢ÏÂÒ»¸ö¿éµÄ¿éºÅ
+            {
+                memLoc = memBlocks.findFreeBlock(); // È¡³ö¿ÕÏĞ¿é
+                memory[memAddr] = memLoc;           // ×îºóÒ»Î»´æ´¢ÏÂÒ»¸ö¿éºÅ
+            }
+
+            location = space[addr]; // »ñÈ¡ÏÂÒ»¸öÍâ´æ¿éºÅ
         }
+        cout << "¶ÁÎÄ¼ş³É¹¦£º" << name << "(" << curFile->id << ")" << endl;
+
+        return true;
     }
 
-    // å†™æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶åå’Œè¦å†™å…¥æ–‡ä»¶çš„å†…å®¹ï¼š1.åœ¨ç›®å½•ä¸­æœç´¢ï¼Œ2.åˆ©ç”¨ç›®å½•çš„æ–‡ä»¶æŒ‡é’ˆå†™æ–‡ä»¶
-    bool writeFile(string name, string data)
+    // Ğ´ÎÄ¼ş£ºÔö
+    bool writeA(int memLoc, string stmp)
     {
-        int index = curFolder->findFile(name);
+        while (memBlocks.blocks[memLoc].used == blockSize) // ±éÀúµ½×îºóÒ»¸ö¿é
+        {
+            memLoc = memory[memLoc * blockSize + blockSize - 1];
+        }
+        int memAddr = memBlocks.blocks[memLoc].start + memBlocks.blocks[memLoc].used; // ÄÚ´æµØÖ·
+
+        for (int i = 0; i < stmp.length(); i++)
+        {
+            char ctmp = stmp[i];
+
+            if (memBlocks.blocks[memLoc].used == blockSize - 1) // ¿éÒÑÂúÔòĞèÒªÔÚ¿éÄ©´æ´¢ÏÂÒ»¸ö¿éµÄ¿éºÅ
+            {
+                memBlocks.blocks[memLoc].used++;    // ×îºóÒ»Î»Ö¸ÏòÏÂÒ»¸ö¿éºÅ
+                memLoc = memBlocks.findFreeBlock(); // È¡³ö¿ÕÏĞ¿é
+                if (memLoc == -1)
+                {
+                    cout << "ÄÚ´æÒÑÂú£º" << stmp.substr(0, i + 1) << endl;
+                    return false;
+                }
+
+                memory[memAddr] = memLoc;                 // ¼ÇÂ¼ÏÂÒ»¸ö¿éºÅ
+                memAddr = memBlocks.blocks[memLoc].start; // ¸üĞÂµØÖ·µ½ÏÂÒ»¸ö¿éÊ×
+                tmpFile->size++;                          // ¸üĞÂÎÄ¼ş´óĞ¡
+            }
+
+            // int data = ctmp;
+            memory[memAddr++] = ctmp;        // ¼ÇÂ¼ÊäÈë
+            memBlocks.blocks[memLoc].used++; // ¸üĞÂ¿éÒÑ·ÖÅä¿Õ¼ä
+        }
+        return true;
     }
 
-    // å…³é—­æ–‡ä»¶ï¼š1.æ’¤é”€ä¸»å­˜ä¸­çš„ç›®å½•ä¿¡æ¯ï¼Œå¹¶é‡Šæ”¾ç”¨æˆ·è¿›ç¨‹å’Œæ–‡ä»¶ä¹‹é—´çš„è”ç³»ï¼Œ2.è€ƒè™‘æ˜¯å¦å†™å›æ–‡ä»¶
-    void closeFile(string name)
+    // Ğ´ÎÄ¼ş£ºÉ¾
+    bool writeD(int memLoc, int data)
     {
+        while (data > 0)
+        {
+            memLoc = tmpFile->memLoc;
+            int tmpLoc = memLoc; // ÁÙÊ±´æ·ÅÉÏÒ»¸ö¿éµÄ¿éºÅ
+
+            while (memBlocks.blocks[memLoc].used == blockSize) // ±éÀúµ½×îºóÒ»¸ö¿é
+            {
+                tmpLoc = memLoc;
+                memLoc = memory[memLoc * blockSize + blockSize - 1];
+            }
+
+            if (memBlocks.blocks[memLoc].used > data) // ´óĞ¡×ã¹»¼õÔòÖ±½Ó¼õ
+            {
+                memBlocks.blocks[memLoc].used -= data;
+                data = 0;
+            }
+            else // ²»¹»¾Í¼õÍêÖ®ºóµ½ÉÏÒ»¸ö¿é
+            {
+                if (tmpLoc == memLoc) // Èç¹û¼õµ½µÚÒ»¸ö¿é»¹²»¹»
+                {
+                    cout << "ÊäÈë³¤¶È³¬³öÎÄ¼ş³¤¶È£¬½«È«²¿É¾³ı" << endl;
+                    data = 0;
+                    memBlocks.blocks[memLoc].used = 0; // ÒÑ·ÖÅä¿Õ¼äÖÃ0£¬µ«×÷ÎªÆğÊ¼¿é²»ÄÜÊÍ·Å
+                    break;
+                }
+                data -= memBlocks.blocks[memLoc].used;
+                memBlocks.freeBlock(memLoc);
+
+                memLoc = tmpLoc;                 // ¸üĞÂ¿éºÅÎªÉÏÒ»¸ö¿é
+                memBlocks.blocks[memLoc].used--; // ¸üĞÂÉÏÒ»¸ö¿éµÄ·ÖÅä¿Õ¼ä
+                tmpFile->size--;                 // ¸üĞÂÎÄ¼ş´óĞ¡
+            }
+        }
+        return true;
     }
 
-    // åˆ é™¤æ–‡ä»¶ï¼ŒæŒ‡æ˜æ–‡ä»¶å:1.åœ¨ç›®å½•ä¸­æœç´¢ï¼Œ2.é‡Šæ”¾ç©ºé—´ï¼Œ3.åˆ é™¤ç›®å½•é¡¹
+    // Ğ´ÎÄ¼ş£º¸Ä
+    bool writeC(int memLoc, int line, int column, string stmp)
+    {
+        string orig = showMemFile();
+        int len = orig.length();
+        int start = line * (blockSize - 1) + column;
+        int end = start + stmp.length();
+
+        string newstr = orig.substr(0, start);
+        newstr += stmp;
+        if (end < len) // Èç¹ûÒªĞ´ÈëµÄ×Ö·û´®³¤¶ÈĞ¡ÓÚÔ­ÎÄÊ£ÏÂµÄ³¤¶È£¬Ôò½ØÈ¡Ê£Óà²¿·Ö
+        {
+            newstr += orig.substr(end, len);
+        }
+
+        writeD(memLoc, len);
+        writeA(memLoc, newstr);
+
+        return true;
+    }
+
+    // Ğ´ÎÄ¼ş£º²å
+    bool writeI(int memLoc, int line, int column, string stmp)
+    {
+        string orig = showMemFile();
+        int len = orig.length();
+        int start = line * (blockSize - 1) + column;
+
+        string newstr = orig.substr(0, start);
+        newstr += stmp;
+        newstr += orig.substr(start, len);
+
+        writeD(memLoc, len);
+        writeA(memLoc, newstr);
+
+        return true;
+    }
+
+    // Ğ´ÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃûºÍÒªĞ´ÈëÎÄ¼şµÄÄÚÈİ£º1.ÔÚÄ¿Â¼ÖĞËÑË÷£¬2.ÀûÓÃÄ¿Â¼µÄÎÄ¼şÖ¸ÕëĞ´ÎÄ¼ş
+    bool writeFile(string name)
+    {
+        int num = getFile(name);
+        if (num == -1)
+        {
+            return false;
+        }
+
+        tmpFile = &memFiles[num];
+
+        if (tmpFile->memLoc == -1)
+        {
+            cout << "ÎÄ¼ş»¹Î´¶ÁÈ¡µ½ÄÚ´æÖĞ" << endl;
+            return false;
+        }
+
+        if (ifIllegal(curFile->protection))
+        {
+            return false;
+        }
+
+        string stmp;
+        char ctmp;
+        while (1)
+        {
+            cout << "ÇëÑ¡ÔñÄãµÄ²Ù×÷ 1.Ôö£¬2.É¾£¬3.¸Ä£¬4.²å (ÊäÈëQÍË³ö)£º";
+            getline(cin, stmp);
+            ctmp = stmp[0];
+
+            int data = 0;
+            int memLoc = tmpFile->memLoc; // »ñÈ¡ÎÄ¼şÔÚÖ÷´æµÄÎ»ÖÃ
+            int line, column;
+
+            switch (ctmp)
+            {
+            case '1':
+                cout << "ÇëÊäÈëÒªÔö¼ÓµÄÄÚÈİ£º" << endl;
+                getline(cin, stmp);
+                writeA(memLoc, stmp);
+                break;
+            case '2':
+                if (memBlocks.blocks[memLoc].used == 0)
+                {
+                    cout << "ÎÄ¼şÒÑ¿Õ" << endl;
+                    return false;
+                }
+                cout << "ÇëÊäÈëÒªÉ¾³ı³¤¶È£º" << endl;
+                cin >> stmp;
+                for (int i = 0; i < stmp.length(); i++)
+                {
+                    ctmp = stmp[i];
+                    if (ctmp < '0' || ctmp > '9')
+                    {
+                        cout << "ÊäÈëÓĞÎó£¬ÇëÖØĞÂÊäÈë£º" << stmp.substr(0, i + 1) << endl;
+                        data = -1;
+                    }
+                    data = data * 10 + ctmp - '0';
+                }
+                if (data == -1)
+                {
+                    continue;
+                }
+                writeD(memLoc, data);
+                break;
+            case '3':
+                cout << "ÇëÊäÈëÒªĞŞ¸ÄµÄĞĞÊı£º";
+                getline(cin, stmp);
+                line = stmp[0] - '0';
+                if (line < 0 || line > tmpFile->size)
+                {
+                    cout << "ÊäÈëĞĞÊı²»·ûºÏÎÄ¼ş³¤¶È£¬ÇëÖØĞÂÊäÈë" << endl;
+                    continue;
+                }
+                cout << "ÇëÊäÈëÒªĞŞ¸ÄµÄÁĞÊı£º";
+                getline(cin, stmp);
+                column = stmp[0] - '0';
+                if (column < 0 || column > memBlocks.blocks[memLoc].used)
+                {
+                    cout << "ÊäÈëÁĞÊı²»·ûºÏÎÄ¼ş³¤¶È£¬ÇëÖØĞÂÊäÈë" << endl;
+                }
+                cout << "ÇëÊäÈëÒªĞŞ¸ÄµÄÄÚÈİ£º";
+                getline(cin, stmp);
+                writeC(memLoc, line, column, stmp);
+                break;
+            case '4':
+                cout << "ÇëÊäÈëÒªĞŞ¸ÄµÄĞĞÊı£º";
+                getline(cin, stmp);
+                line = stmp[0] - '0';
+                if (line < 0 || line > tmpFile->size)
+                {
+                    cout << "ÊäÈëĞĞÊı²»·ûºÏÎÄ¼ş³¤¶È£¬ÇëÖØĞÂÊäÈë" << endl;
+                    continue;
+                }
+                cout << "ÇëÊäÈëÒªĞŞ¸ÄµÄÁĞÊı£º";
+                getline(cin, stmp);
+                column = stmp[0] - '0';
+                if (column < 0 || column > memBlocks.blocks[memLoc].used)
+                {
+                    cout << "ÊäÈëÁĞÊı²»·ûºÏÎÄ¼ş³¤¶È£¬ÇëÖØĞÂÊäÈë" << endl;
+                }
+                cout << "ÇëÊäÈëÒª²åÈëµÄÄÚÈİ£º";
+                getline(cin, stmp);
+                writeC(memLoc, line, column, stmp);
+                break;
+            case 'Q':
+            case 'q':
+                cout << "ÍË³öĞ´ÎÄ¼ş³ÌĞò" << endl;
+                tmpFile->dirty = true;
+                return true;
+            default:
+                cout << "ÊäÈë´íÎó" << endl;
+                break;
+            }
+
+            showMemFile();
+        }
+        cout << "Òì³£ÍÆ³ö" << endl;
+        return false;
+    }
+
+    // ¹Ø±ÕÎÄ¼ş£º1.³·ÏúÖ÷´æÖĞµÄÄ¿Â¼ĞÅÏ¢£¬²¢ÊÍ·ÅÓÃ»§½ø³ÌºÍÎÄ¼şÖ®¼äµÄÁªÏµ£¬2.¿¼ÂÇÊÇ·ñĞ´»ØÎÄ¼ş
+    bool closeFile(string name)
+    {
+        int num = getFile(name);
+        if (num == -1)
+        {
+            return false;
+        }
+
+        tmpFile = &memFiles[num];
+
+        int memLoc = tmpFile->memLoc; // »ñÈ¡ÎÄ¼şÔÚÖ÷´æµÄÎ»ÖÃ
+
+        if (tmpFile->dirty)
+        {
+            cout << "ÎÄ¼şÓĞ¸Ä¶¯£¬ÊÇ·ñ±£´æ(Y/N)£¿" << endl;
+            string stmp;
+            getline(cin, stmp);
+            if (stmp[0] == 'Y' || stmp[0] == 'y')
+            {
+
+                int size = tmpFile->size; // »ñÈ¡¸üĞÂºóµÄÎÄ¼ş´óĞ¡
+                if (size > (curFile->size + spaceBlocks.free.size()))
+                {
+                    cout << "Íâ´æ¿Õ¼ä²»×ã£¬ÎŞ·¨Ğ´»Ø£¬Äã¿ÉÒÔÊÔ×ÅÉ¾µã¶«Î÷" << endl;
+                    return false;
+                }
+
+                int location = curFile->location;              // »ñÈ¡ÎÄ¼şÔÚ´ÅÅÌÖĞµÄÎ»ÖÃ
+                int addr = spaceBlocks.blocks[location].start; // Íâ´æµØÖ·
+
+                for (int i = 0; i < size; i++)
+                {
+                    int used = memBlocks.blocks[memLoc].used;     // ÄÚ´æ¿éÒÑ·ÖÅä¿Õ¼ä
+                    int memAddr = memBlocks.blocks[memLoc].start; // ÄÚ´æµØÖ·
+
+                    if (i > curFile->size) // ³¬³öÔ­ÎÄ¼ş´óĞ¡£¬ĞèÒª·ÖÅäĞÂµÄÍâ´æ¿é
+                    {
+                        location = spaceBlocks.free.back(); // È¡³ö¿ÕÏĞ¿é
+                        spaceBlocks.free.pop_back();
+
+                        space[addr] = location; // ×îºóÒ»Î»ÓÃÓÚ´æ´¢ÏÂÒ»¸ö¿éºÅ
+
+                        spaceBlocks.blocks[location].used = used;
+                    }
+                    else // ÔÚÔ­ÎÄ¼ş´óĞ¡ÄÚ£¬½øÈëÏÂÒ»¸ö¿é
+                    {
+                        location = space[addr];
+                    }
+
+                    addr = spaceBlocks.blocks[location].start; // ¸üĞÂÍâ´æÆğÊ¼µØÖ·
+
+                    for (int j = 0; j < used - 1; j++)
+                    {
+                        space[addr++] = memory[memAddr++]; // ´æ´¢Êı¾İ
+                    }
+
+                    memLoc = memory[memAddr]; // »ñÈ¡ÏÂÒ»¸öÄÚ´æ¿éºÅ
+                }
+
+                if (size < curFile->size)
+                {
+                    location = space[location * blockSize + blockSize - 1];
+                    while (!spaceBlocks.freeBlock(location))
+                    {
+                        location = space[location * blockSize + blockSize - 1];
+                    }
+                }
+
+                curFile->size = size; // ¸üĞÂÎÄ¼ş´óĞ¡
+            }
+        }
+
+        // ÇåÀíÄÚ´æ¿é
+        memLoc = tmpFile->memLoc;
+        while (!memBlocks.freeBlock(memLoc))
+        {
+            memLoc = memory[memLoc * blockSize + blockSize - 1];
+        }
+
+        cout << "¹Ø±ÕÎÄ¼ş³É¹¦£º" << name << "(" << curFile->id << ")" << endl;
+
+        // ´Ó´ò¿ªÎÄ¼ş±íÖĞÉ¾³ı
+        memFiles.erase(memFiles.begin() + num);
+        
+        return true;
+    }
+
+    // É¾³ıÎÄ¼ş£¬Ö¸Ã÷ÎÄ¼şÃû:1.ÔÚÄ¿Â¼ÖĞËÑË÷£¬2.ÊÍ·Å¿Õ¼ä£¬3.É¾³ıÄ¿Â¼Ïî
     bool deleteFile(string name)
     {
         int index = curFolder->findFile(name);
         if (index == -1)
         {
-            cout << "åˆ é™¤æ–‡ä»¶å¤±è´¥ï¼Œæ²¡æœ‰æ‰¾åˆ°æ–‡ä»¶" << endl;
+            cout << "É¾³ıÎÄ¼şÊ§°Ü£¬Ã»ÓĞÕÒµ½ÎÄ¼ş" << endl;
             return false;
         }
         curFile = &curFolder->files[index];
@@ -398,14 +825,18 @@ public:
             return false;
         }
 
-        // é‡Šæ”¾ç©ºé—´
+        // ÊÍ·Å¿Õ¼ä
         int location = curFile->location;
         while (!spaceBlocks.freeBlock(location))
         {
             location = space[location * blockSize + blockSize - 1];
         }
 
-        // åˆ é™¤ç›®å½•é¡¹
+        cout << "É¾³ıÎÄ¼ş³É¹¦£º" << curPath << "/" << name << "(" << curFile->id << ")" << endl;
+
+        // É¾³ıÄ¿Â¼Ïî
         curFolder->files.erase(curFolder->files.begin() + index);
+
+        return true;
     }
 };

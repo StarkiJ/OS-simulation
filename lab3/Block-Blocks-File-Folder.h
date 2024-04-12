@@ -6,12 +6,12 @@
 
 using namespace std;
 
-// å—
+// ¿é
 class Block
 {
 public:
-    int start; // èµ·å§‹åœ°å€
-    int used;  // å·²åˆ†é…
+    int start; // ÆğÊ¼µØÖ·
+    int used;  // ÒÑ·ÖÅä
 
     Block(int start)
     {
@@ -23,11 +23,11 @@ public:
 class Blocks
 {
 public:
-    vector<Block> blocks; // å—åˆ—è¡¨
-    vector<int> free;     // ç©ºé—²å—åˆ—è¡¨
+    vector<Block> blocks; // ¿éÁĞ±í
+    vector<int> free;     // ¿ÕÏĞ¿éÁĞ±í
 
-    int size; // å—å¤§å°
-    int num;  // å—æ•°é‡
+    int size; // ¿é´óĞ¡
+    int num;  // ¿éÊıÁ¿
 
     Blocks() {}
     Blocks(int space, int size)
@@ -42,7 +42,7 @@ public:
         }
     }
 
-    // å¯»æ‰¾ç©ºé—²å¤–å­˜ç©ºé—´å—
+    // Ñ°ÕÒ¿ÕÏĞÍâ´æ¿Õ¼ä¿é
     int findFreeBlock()
     {
         if (free.size() == 0)
@@ -50,19 +50,29 @@ public:
             return -1;
         }
 
-        int index = free.front(); // å–å‡ºç¬¬ä¸€ä¸ªç©ºé—²å—åºå·
+        int index = free.front(); // È¡³öµÚÒ»¸ö¿ÕÏĞ¿éĞòºÅ
         free.erase(free.begin());
 
-        blocks[index].used = 0; // å·²åˆ†é…ç©ºé—´ç½®0
+        blocks[index].used = 0; // ÒÑ·ÖÅä¿Õ¼äÖÃ0
 
-        return index; // è¿™é‡Œè®°å¾—å¯èƒ½å¯ä»¥æ”¹åŠ¨
+        return index; // ÕâÀï¼ÇµÃ¿ÉÄÜ¿ÉÒÔ¸Ä¶¯
     }
 
-    // é‡Šæ”¾å—
+    // ÊÍ·Å¿é
     bool freeBlock(int index)
     {
+        for (int i = 0; i < free.size(); i++)
+        {
+            if (free[i] == index)
+            {
+                cout << "´íÎó£ºÖØ¸´Çå³ı¿ÕÏĞ¿é£¡£¡£¡" << endl;
+                return false;
+            }
+        }
+
+        blocks[index].used = 0;
         free.push_back(index);
-        if (blocks[index].used == size) // å¦‚æœä¸æ˜¯è¿™ä¸ªæ–‡ä»¶çš„æœ€åä¸€ä¸ªå—
+        if (blocks[index].used == size) // Èç¹û²»ÊÇÕâ¸öÎÄ¼şµÄ×îºóÒ»¸ö¿é
         {
             return false;
         }
@@ -71,17 +81,17 @@ public:
     }
 };
 
-// ç›®å½•é¡¹(æ–‡ä»¶æ§åˆ¶å—)
+// Ä¿Â¼Ïî(ÎÄ¼ş¿ØÖÆ¿é)
 class File
 {
 public:
-    string name;       // æ–‡ä»¶å
-    int id;            // æ ‡è¯†ç¬¦
-    int type;          // ç±»å‹
-    int location;      // ä½ç½®
-    int size;          // å¤§å°
-    int protection;    // ä¿æŠ¤
-    time_t updatetime; // æ›´æ–°æ—¶é—´
+    string name;       // ÎÄ¼şÃû
+    int id;            // ±êÊ¶·û
+    int type;          // ÀàĞÍ
+    int location;      // Î»ÖÃ(¿éºÅ)
+    int size;          // ´óĞ¡
+    int protection;    // ±£»¤
+    time_t updatetime; // ¸üĞÂÊ±¼ä
 
     File(string name, int id, int type, int location, int protection)
     {
@@ -89,18 +99,36 @@ public:
         this->id = id;
         this->type = type;
         this->location = location;
-        this->size = 0;
+        this->size = 1;
         this->protection = protection;
         time(&updatetime);
     }
 };
 
-// æ ‘çŠ¶ç›®å½•
+class MemFile
+{
+public:
+    File *file; // Íâ´æÎÄ¼şÖ¸Õë
+    int memLoc; // ÄÚ´æÎ»ÖÃ(¿éºÅ)
+    int size;   // ÎÄ¼ş´óĞ¡(¿éÊı)
+    bool dirty; // ÔàÎ»
+
+    MemFile() {}
+    MemFile(File *file, int memLoc)
+    {
+        this->file = file;
+        this->memLoc = memLoc;
+        this->size = file->size;
+        this->dirty = false;
+    }
+};
+
+// Ê÷×´Ä¿Â¼
 class Folder
 {
 public:
     string name;
-    int protection; // ä¿æŠ¤
+    int protection; // ±£»¤
 
     vector<File> files;
     vector<Folder> folders;
@@ -112,7 +140,7 @@ public:
         this->protection = protection;
     }
 
-    int findFolder(string name) // è·å–æ–‡ä»¶å¤¹ç¼–å·
+    int findFolder(string name) // »ñÈ¡ÎÄ¼ş¼Ğ±àºÅ
     {
         int size = folders.size();
         for (int j = 0; j < size; j++)
@@ -125,7 +153,7 @@ public:
         return -1;
     }
 
-    int findFile(string name) // è·å–æ–‡ä»¶ç¼–å·
+    int findFile(string name) // »ñÈ¡ÎÄ¼ş±àºÅ
     {
         int size = files.size();
         for (int j = 0; j < size; j++)
