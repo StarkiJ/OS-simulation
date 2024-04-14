@@ -61,6 +61,11 @@ public:
     // 释放块
     bool freeBlock(int index)
     {
+        if (index < 0 || index >= num)
+        {
+            cout << "错误：清除目标为非法块序号！！！" << endl;
+            return false;
+        }
         for (int i = 0; i < free.size(); i++)
         {
             if (free[i] == index)
@@ -70,13 +75,14 @@ public:
             }
         }
 
-        blocks[index].used = 0;
         free.push_back(index);
         if (blocks[index].used == size) // 如果不是这个文件的最后一个块
         {
+            blocks[index].used = 0;
             return false;
         }
 
+        blocks[index].used = 0;
         return true;
     }
 };
@@ -101,7 +107,7 @@ public:
         this->location = location;
         this->size = 1;
         this->protection = protection;
-        time(&updatetime);
+        this->updatetime = time(NULL);
     }
 };
 
@@ -127,6 +133,7 @@ public:
 class Folder
 {
 public:
+    string path;
     string name;
     int protection; // 保护
 
@@ -134,8 +141,9 @@ public:
     vector<Folder> folders;
 
     Folder() {}
-    Folder(string name, int protection)
+    Folder(string path, string name, int protection)
     {
+        this->path = path;
         this->name = name;
         this->protection = protection;
     }
@@ -164,5 +172,104 @@ public:
             }
         }
         return -1;
+    }
+
+    void showFolder()
+    {
+        int folderNum = folders.size();
+        int fileNum = files.size();
+
+        if (folderNum == 0 && fileNum == 0)
+        {
+            return;
+        }
+
+        cout << path << "/" << name << endl;
+
+        cout << "文件夹(" << folderNum << "): ";
+        for (int i = 0; i < folderNum; i++)
+        {
+            cout << folders[i].name << " ";
+        }
+        cout << endl;
+
+        cout << "文件(" << fileNum << "): ";
+        for (int i = 0; i < fileNum; i++)
+        {
+            cout << files[i].name
+                 << "(" << files[i].id << ")"
+                 << " ";
+        }
+        cout << endl;
+    }
+
+    // 显示树状目录
+    void showAll()
+    {
+        int folderNum = folders.size();
+
+        showFolder();
+
+        for (int i = 0; i < folderNum; i++)
+        {
+            folders[i].showAll();
+        }
+    }
+
+    // 写入文件
+    void writeBack(ofstream &ofs)
+    {
+        int folderNum = folders.size();
+        int fileNum = files.size();
+
+        ofs << path << " " << name << " " << protection << endl;
+        ofs << folderNum << " " << fileNum << endl;
+
+        for (int i = 0; i < fileNum; i++)
+        {
+            ofs << files[i].name << " "
+                << files[i].id << " "
+                << files[i].type << " "
+                << files[i].location << " "
+                << files[i].size << " "
+                << files[i].protection << " "
+                << files[i].updatetime << endl;
+        }
+
+        for (int i = 0; i < folderNum; i++) // 递归写入文件夹
+        {
+            folders[i].writeBack(ofs);
+        }
+    }
+
+    // 读取文件
+    void readBack(ifstream &ifs)
+    {
+        int folderNum;
+        int fileNum;
+        ifs >> path >> name >> protection;
+        ifs >> folderNum >> fileNum;
+        for (int i = 0; i < fileNum; i++)
+        {
+            string name;
+            int id;
+            int type;
+            int location;
+            int size;
+            int protection;
+            time_t updatetime;
+            ifs >> name >> id >> type >> location >> size >> protection >> updatetime;
+            File ftmp(name, id, type, location, protection);
+            ftmp.size = size;
+            ftmp.updatetime = updatetime;
+            files.push_back(ftmp);
+        }
+
+        for (int i = 0; i < folderNum; i++) // 递归读取文件夹
+        {
+            Folder folder;
+            folder.readBack(ifs);
+            folders.push_back(folder);
+        }
     }
 };

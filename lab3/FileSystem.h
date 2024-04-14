@@ -8,8 +8,8 @@ class FileSystem
     int blockSize;  // 块大小
     int numOfFiles; // 历史文件数量(包含删除文件)
 
-    vector<char> space;  // 外存空间
-    vector<char> memory; // 内存
+    vector<int> space;  // 外存空间
+    vector<int> memory; // 内存
 
     vector<MemFile> memFiles; // 内存文件集合
 
@@ -32,13 +32,13 @@ public:
         this->blockSize = blockSize;
         numOfFiles = 0;
 
-        space = vector<char>(sizeOfSpace, 'n');
-        memory = vector<char>(sizeOfMemory, 'n');
+        space = vector<int>(sizeOfSpace, -1);
+        memory = vector<int>(sizeOfMemory, -1);
 
         spaceBlocks = Blocks(sizeOfSpace, blockSize);
         memBlocks = Blocks(sizeOfMemory, blockSize);
 
-        root = Folder("root", 0);
+        root = Folder(".", "root", 0);
         curFolder = &root;
         curPath = "root:";
     }
@@ -68,6 +68,7 @@ public:
         while (1)
         {
             cin >> itmp;
+            cin.ignore();
             if (itmp < 0 || itmp > 3)
             {
                 cout << "输入错误，请重新输入！" << endl;
@@ -105,23 +106,180 @@ public:
     // 显示当前文件夹内容
     void showThisFolder()
     {
-        showPath();
+        curFolder->showFolder();
+    }
 
-        cout << "文件夹：";
-        int size = curFolder->folders.size();
+    // 显示树状目录
+    void showTree()
+    {
+        root.showAll();
+    }
+
+    // 开始读取程序
+    void start()
+    {
+        int size = 0;
+        int itmp;
+        string stmp;
+        ifstream ifs;
+
+        ifs.open("info.txt", ios::in);
+        if (ifs.is_open())
+        {
+            // 空间大小不符则数据文件无效
+            if ((!(ifs >> size) || size != space.size()) ||
+                (!(ifs >> size) || size != memory.size()) ||
+                (!(ifs >> size) || size != blockSize))
+            {
+                cout << "数据文件无效" << endl;
+                return;
+            }
+
+            cout << "数据文件有效，开始读取" << endl;
+            ifs.ignore();
+            getline(ifs, password);
+            ifs >> numOfFiles;
+        }
+        else
+        {
+            cout << "未找到info文件" << endl;
+            return;
+        }
+        ifs.close();
+
+        ifs.open("space.txt", ios::in);
+        if (!ifs.is_open())
+        {
+            cout << "打开space文件失败" << endl;
+            return;
+        }
+        size = space.size(); // 读取外存空间
         for (int i = 0; i < size; i++)
         {
-            cout << curFolder->folders[i].name << " ";
+            ifs >> itmp;
+            space[i] = itmp;
         }
-        cout << endl;
+        ifs.close();
 
-        cout << "文件：";
-        size = curFolder->files.size();
+        ifs.open("spaceBlocks.txt", ios::in);
+        if (!ifs.is_open())
+        {
+            cout << "打开spaceBlocks文件失败" << endl;
+            return;
+        }
+
+        spaceBlocks.free.clear();
+        ifs >> size;
         for (int i = 0; i < size; i++)
         {
-            cout << curFolder->files[i].name << " ";
+            ifs >> itmp;
+            spaceBlocks.free.push_back(itmp);
         }
-        cout << endl;
+
+        size = spaceBlocks.blocks.size();
+        for (int i = 0; i < size; i++)
+        {
+            ifs >> spaceBlocks.blocks[i].start >> spaceBlocks.blocks[i].used;
+        }
+        ifs.close();
+
+        ifs.open("tree.txt", ios::in);
+        if (!ifs.is_open())
+        {
+            cout << "打开tree文件失败" << endl;
+            return;
+        }
+        root.readBack(ifs);
+        ifs.close();
+
+        cout << "数据文件读取成功" << endl;
+        showTree();
+    }
+
+    // 结束写回程序
+    void exit()
+    {
+        int size;
+        ofstream ofs;
+
+        ofs.open("info.txt", ios::out | ios::trunc);
+        if (!ofs.is_open())
+        {
+            cout << "打开info文件失败" << endl;
+            return;
+        }
+        ofs << space.size() << " " << memory.size() << " " << blockSize << endl;
+        ofs << password << endl;
+        ofs << numOfFiles << endl;
+        ofs.close();
+
+        ofs.open("space.txt", ios::out | ios::trunc);
+        if (!ofs.is_open())
+        {
+            cout << "打开space文件失败" << endl;
+            return;
+        }
+        size = space.size(); // 外存空间
+        for (int i = 0; i < size; i++)
+        {
+            ofs << space[i] << " ";
+            if (i % 8 == 7)
+            {
+                ofs << endl;
+            }
+        }
+        ofs.close();
+
+        ofs.open("spaceBlocks.txt", ios::out | ios::trunc);
+        if (!ofs.is_open())
+        {
+            cout << "打开spaceBlocks文件失败" << endl;
+            return;
+        }
+
+        size = spaceBlocks.free.size(); // 外存空闲块
+        ofs << size << endl;
+        for (int i = 0; i < size; i++)
+        {
+            ofs << spaceBlocks.free[i] << " ";
+        }
+        ofs << endl;
+
+        size = spaceBlocks.num; // 外存块
+        for (int i = 0; i < size; i++)
+        {
+            ofs << spaceBlocks.blocks[i].start << " " << spaceBlocks.blocks[i].used << endl;
+        }
+        ofs.close();
+
+        ofs.open("tree.txt", ios::out | ios::trunc); // 树状目录
+        if (!ofs.is_open())
+        {
+            cout << "打开tree文件失败" << endl;
+            return;
+        }
+        root.writeBack(ofs);
+        ofs.close();
+
+        cout << "已将外存数据写回数据文件" << endl;
+    }
+
+    // 结束程序
+    void end()
+    {
+        int size = memFiles.size();
+        if (size)
+        {
+            showOpenFile();
+            cout << "还有" << size << "个文件未关闭，是否确定退出(Y/M)：";
+            char c;
+            cin >> c;
+            if (c == 'N' || c == 'n')
+            {
+                return;
+            }
+        }
+        exit();
     }
 
     // 创建文件夹
@@ -138,7 +296,7 @@ public:
             cout << "创建文件夹失败，文件夹已存在" << endl;
             return false;
         }
-        Folder newFolder(name, protection);
+        Folder newFolder(curPath, name, protection);
         curFolder->folders.push_back(newFolder);
 
         cout << "创建文件夹成功：" << curPath << "/" << name << endl;
@@ -333,6 +491,24 @@ public:
         return true;
     }
 
+    // 显示打开文件表
+    void showOpenFile()
+    {
+        int size = memFiles.size();
+        if (size == 0)
+        {
+            cout << "当前没有打开的文件" << endl;
+            return;
+        }
+
+        cout << "当前打开的文件：" << endl;
+        for (int i = 0; i < size; i++)
+        {
+            cout << i << ": " << memFiles[i].file->name
+                 << "(" << memFiles[i].file->id << ")" << endl;
+        }
+    }
+
     // 从打开文件表中选择文件
     int getFile(string name) // 获取文件编号
     {
@@ -352,7 +528,7 @@ public:
         // 判断是否找到目标文件，如果找到了多个同名文件则进行选择
         if (indexes.size() == 0)
         {
-            cout << "读文件失败，未在已打开文件中找到该文件" << endl;
+            cout << "失败，未在已打开文件中找到该文件" << endl;
             return -1;
         }
         else if (indexes.size() > 1)
@@ -375,6 +551,13 @@ public:
         num = indexes[num];
         curFile = memFiles[num].file;
 
+        if (ifIllegal(curFile->protection)) // 判断权限
+        {
+            return -1;
+        }
+
+        tmpFile = &memFiles[num];
+
         return num;
     }
 
@@ -390,7 +573,8 @@ public:
         }
 
         cout << "文件名：" << tmpFile->file->name << endl;
-        for (int i = 0; i < tmpFile->size; i++)
+        int size = tmpFile->size;
+        for (int i = 0; i < size; i++)
         {
             int used = memBlocks.blocks[memLoc].used;     // 内存块已分配空间
             int memAddr = memBlocks.blocks[memLoc].start; // 内存地址
@@ -416,19 +600,12 @@ public:
     // 读文件，指明文件名和要读入文件块的内存位置：1.在目录中搜索，2.将文件内容读入内存
     bool readFile(string name)
     {
-        int num = getFile(name);
-        if (num == -1)
-        {
-            return false;
-        }
-        if (ifIllegal(curFile->protection)) // 判断权限
+        if (getFile(name) == -1)
         {
             return false;
         }
 
-        tmpFile = &memFiles[num];
-
-        if (memFiles[num].memLoc != -1) // 文件已经打开
+        if (tmpFile->memLoc != -1) // 文件已经打开
         {
             showMemFile();
             return true;
@@ -454,7 +631,7 @@ public:
 
         // 读到内存
         int memLoc = memBlocks.findFreeBlock(); // 取出空闲块
-        memFiles[num].memLoc = memLoc;
+        tmpFile->memLoc = memLoc;
 
         if (size == 0)
         {
@@ -489,7 +666,7 @@ public:
 
         tmpFile->size = size;
 
-        cout << "读文件成功：" << name << "(" << curFile->id << ")" << endl;
+        cout << "读文件成功：" << tmpFile->file->name << "(" << curFile->id << ")" << endl;
         showMemFile();
 
         return true;
@@ -523,8 +700,8 @@ public:
                 tmpFile->size++;                          // 更新文件大小
             }
 
-            // int data = ctmp;
-            memory[memAddr++] = ctmp;        // 记录输入
+            int data = ctmp;
+            memory[memAddr++] = data;        // 记录输入
             memBlocks.blocks[memLoc].used++; // 更新块已分配空间
         }
         return true;
@@ -610,17 +787,10 @@ public:
     // 写文件，指明文件名和要写入文件的内容：1.在目录中搜索，2.利用目录的文件指针写文件
     bool writeFile(string name)
     {
-        int num = getFile(name);
-        if (num == -1)
+        if (getFile(name) == -1)
         {
             return false;
         }
-        if (ifIllegal(curFile->protection))
-        {
-            return false;
-        }
-
-        tmpFile = &memFiles[num];
 
         if (tmpFile->memLoc == -1)
         {
@@ -651,7 +821,8 @@ public:
                 if (memBlocks.blocks[memLoc].used == 0)
                 {
                     cout << "文件已空" << endl;
-                    break;;
+                    break;
+                    ;
                 }
                 cout << "请输入要删除长度：" << endl;
                 cin >> stmp;
@@ -673,42 +844,42 @@ public:
                 writeD(memLoc, data);
                 break;
             case '3':
-                cout << "请输入要修改的行数：";
-                getline(cin, stmp);
+                cout << "请输入要修改的行数和列数：";
+                cin >> stmp;
                 line = stmp[0] - '0';
                 if (line < 0 || line > tmpFile->size)
                 {
                     cout << "输入行数不符合文件长度，请重新输入" << endl;
                     continue;
                 }
-                cout << "请输入要修改的列数：";
-                getline(cin, stmp);
+                cin >> stmp;
                 column = stmp[0] - '0';
                 if (column < 0 || column > memBlocks.blocks[memLoc].used)
                 {
                     cout << "输入列数不符合文件长度，请重新输入" << endl;
                 }
                 cout << "请输入要修改的内容：";
+                cin.ignore();
                 getline(cin, stmp);
                 writeC(memLoc, line, column, stmp);
                 break;
             case '4':
-                cout << "请输入要修改的行数：";
-                getline(cin, stmp);
+                cout << "请输入要插入的行数和列数：";
+                cin >> stmp;
                 line = stmp[0] - '0';
                 if (line < 0 || line > tmpFile->size)
                 {
                     cout << "输入行数不符合文件长度，请重新输入" << endl;
                     continue;
                 }
-                cout << "请输入要修改的列数：";
-                getline(cin, stmp);
+                cin >> stmp;
                 column = stmp[0] - '0';
                 if (column < 0 || column > memBlocks.blocks[memLoc].used)
                 {
                     cout << "输入列数不符合文件长度，请重新输入" << endl;
                 }
                 cout << "请输入要插入的内容：";
+                cin.ignore();
                 getline(cin, stmp);
                 writeI(memLoc, line, column, stmp);
                 break;
@@ -736,8 +907,6 @@ public:
         {
             return false;
         }
-
-        tmpFile = &memFiles[num];
 
         int memLoc = tmpFile->memLoc; // 获取文件在主存的位置
 
@@ -791,7 +960,8 @@ public:
                     memLoc = memory[memAddr]; // 获取下一个内存块号
                 }
 
-                curFile->size = size; // 更新文件大小
+                curFile->size = size;             // 更新文件大小
+                curFile->updatetime = time(NULL); // 更新修改时间
 
                 cout << "写回文件成功" << endl;
             }
