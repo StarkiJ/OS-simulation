@@ -222,7 +222,7 @@ public:
         size = space.size(); // 外存空间
         for (int i = 0; i < size; i++)
         {
-            ofs << space[i] << " ";
+            ofs << space[i] << "\t";
             if (i % 8 == 7)
             {
                 ofs << endl;
@@ -510,7 +510,7 @@ public:
     }
 
     // 从打开文件表中选择文件
-    int getFile(string name) // 获取文件编号
+    int getFile(string name) // 通过文件名获取文件编号
     {
         // 从内存打开文件表中找到目标文件的目录项
         vector<int> indexes;
@@ -559,6 +559,19 @@ public:
         tmpFile = &memFiles[num];
 
         return num;
+    }
+
+    int getFile(int id) // 通过文件识别号获取文件编号
+    {
+        int size = memFiles.size();
+        for (int i = 0; i < size; i++)
+        {
+            if (memFiles[i].file->id == id)
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 
     // 显示内存中文件的内容
@@ -995,6 +1008,12 @@ public:
 
         if (ifIllegal(curFile->protection))
         {
+            return false;
+        }
+
+        if (getFile(curFile->id) != -1)
+        {
+            cout << "删除文件失败，文件未关闭" << endl;
             return false;
         }
 
