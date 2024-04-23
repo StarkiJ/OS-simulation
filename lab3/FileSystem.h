@@ -135,7 +135,15 @@ public:
                 return;
             }
 
-            cout << "数据文件有效，开始读取" << endl;
+            cout << "数据文件有效，是否读取(Y/N)：";
+            cin >> stmp;
+            if (stmp == "N" || stmp == "n")
+            {
+                ifs.close();
+                cout << "放弃读取数据文件，新建文件系统" << endl;
+                return;
+            }
+
             ifs.ignore();
             getline(ifs, password);
             ifs >> numOfFiles;
@@ -199,6 +207,15 @@ public:
     // 结束写回程序
     void exit()
     {
+        char c;
+        cout << "正在退出程序，是否写回数据文件(Y/N)：";
+        cin >> c;
+        if (c == 'N' || c == 'n')
+        {
+            cout << "放弃写回数据文件" << endl;
+            return;
+        }
+
         int size;
         ofstream ofs;
 
@@ -607,6 +624,7 @@ public:
             memLoc = memory[memAddr]; // 获取下一个内存块号
         }
 
+        cout << stmp << endl;
         return stmp;
     }
 
