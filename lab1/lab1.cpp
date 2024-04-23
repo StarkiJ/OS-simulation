@@ -88,7 +88,7 @@ bool compareArrivalTime(Process a, Process b)
 bool readFile(vector<Process> &processes)
 {
     ifstream ifs;
-    ifs.open("lab13.txt", ios::in);
+    ifs.open("lab12.txt", ios::in);
 
     // 文件不存在则返回
     if (!ifs)

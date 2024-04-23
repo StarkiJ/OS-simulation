@@ -9,6 +9,7 @@ void showMenu()
     cout << "4.打开文件" << endl;
     cout << "5.读文件" << endl;
     cout << "6.写文件(不支持中文！)" << endl;
+    
     cout << "7.关闭文件" << endl;
     cout << "8.删除文件" << endl;
     cout << "输入 M 显示操作菜单" << endl;

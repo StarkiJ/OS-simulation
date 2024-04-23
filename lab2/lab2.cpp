@@ -104,7 +104,7 @@ bool readEM(vector<vector<int>> &externalMemory, int pageSize)
 bool readFile(vector<Operation> &operations, int pageSize)
 {
     ifstream ifs;
-    ifs.open("lab2.txt", ios::in);
+    ifs.open("clock.txt", ios::in);
 
     // 文件不存在则返回
     if (!ifs)
