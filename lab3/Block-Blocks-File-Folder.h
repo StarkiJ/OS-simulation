@@ -201,6 +201,8 @@ public:
                  << " ";
         }
         cout << endl;
+
+        cout << endl;
     }
 
     // ÏÔÊ¾Ê÷×´Ä¿Â¼
@@ -222,13 +224,14 @@ public:
         int folderNum = folders.size();
         int fileNum = files.size();
 
-        ofs << path << " " << name << " " << protection << endl;
-        ofs << folderNum << " " << fileNum << endl;
+        ofs << path << endl;
+        ofs << name << endl;
+        ofs << protection << " " << folderNum << " " << fileNum << endl;
 
         for (int i = 0; i < fileNum; i++)
         {
-            ofs << files[i].name << " "
-                << files[i].id << " "
+            ofs << files[i].name << endl;
+            ofs << files[i].id << " "
                 << files[i].type << " "
                 << files[i].location << " "
                 << files[i].size << " "
@@ -247,8 +250,10 @@ public:
     {
         int folderNum;
         int fileNum;
-        ifs >> path >> name >> protection;
-        ifs >> folderNum >> fileNum;
+        getline(ifs, path);
+        getline(ifs, name);
+        ifs >> protection >> folderNum >> fileNum;
+        ifs.ignore();
         for (int i = 0; i < fileNum; i++)
         {
             string name;
@@ -258,7 +263,9 @@ public:
             int size;
             int protection;
             time_t updatetime;
-            ifs >> name >> id >> type >> location >> size >> protection >> updatetime;
+            getline(ifs, name);
+            ifs >> id >> type >> location >> size >> protection >> updatetime;
+            ifs.ignore();
             File ftmp(name, id, type, location, protection);
             ftmp.size = size;
             ftmp.updatetime = updatetime;

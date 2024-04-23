@@ -8,7 +8,7 @@ void showMenu()
     cout << "3.创建文件" << endl;
     cout << "4.打开文件" << endl;
     cout << "5.读文件" << endl;
-    cout << "6.写文件" << endl;
+    cout << "6.写文件(不支持中文！)" << endl;
     cout << "7.关闭文件" << endl;
     cout << "8.删除文件" << endl;
     cout << "输入 M 显示操作菜单" << endl;
@@ -16,6 +16,7 @@ void showMenu()
     cout << "输入 O 显示打开的文件" << endl;
     cout << "输入 A 进入管理员界面" << endl;
     cout << "输入 Q 退出程序" << endl;
+    cout << endl;
 }
 
 int main()
@@ -44,20 +45,20 @@ int main()
         {
         case '1':
             cout << "请输入创建的文件夹名称：";
-            cin >> stmp;
+            getline(cin, stmp);
             myFileSys.createFolder(stmp, 0);
             break;
         case '2':
             cout << "( /x 为绝对路径, ./x为 当前目录, ../x 为上一级目录 )" << endl;
             cout << "请输入文件夹路径：";
-            cin >> stmp;
+            getline(cin, stmp);
             myFileSys.openFolder(stmp);
             myFileSys.showPath();       // 显示当前路径
             myFileSys.showThisFolder(); // 显示当前文件夹内容
             break;
         case '3':
             cout << "请输入创建的文件名称：";
-            cin >> stmp;
+            getline(cin, stmp);
             cout << "0.公开文件" << endl;
             cout << "1.读写文件" << endl;
             cout << "2.只读文件" << endl;

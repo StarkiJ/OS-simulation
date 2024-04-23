@@ -833,7 +833,7 @@ public:
         char ctmp;
         while (1)
         {
-            cout << "请选择你的操作 1.增，2.删，3.改，4.插 (输入Q退出)：";
+            cout << "请选择你的操作 1.增，2.删，3.改，4.插 (输入Q退出) (不支持中文!)：";
             getline(cin, stmp);
             ctmp = stmp[0];
 
