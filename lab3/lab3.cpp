@@ -19,6 +19,20 @@ void showMenu()
     cout << endl;
 }
 
+bool ifLegal(string name)
+{
+    int size = name.size();
+    for (int i = 0; i < size; i++)
+    {
+        if (name[i] == '.' || name[i] == '/')
+        {
+            cout << "命名错误：名字中不能包含‘.’或‘/’！" << endl;
+            return false;
+        }
+    }
+    return true;
+}
+
 int main()
 {
     // 最后一位用来存下一个块号,中文又得占两位,难顶,考虑把块大小改成奇数解决
@@ -46,6 +60,10 @@ int main()
         case '1':
             cout << "请输入创建的文件夹名称：";
             getline(cin, stmp);
+            if (!ifLegal(stmp))
+            {
+                break;
+            }
             myFileSys.createFolder(stmp, 0);
             break;
         case '2':
@@ -59,6 +77,10 @@ int main()
         case '3':
             cout << "请输入创建的文件名称：";
             getline(cin, stmp);
+            if (!ifLegal(stmp))
+            {
+                break;
+            }
             cout << "0.公开文件" << endl;
             cout << "1.读写文件" << endl;
             cout << "2.只读文件" << endl;

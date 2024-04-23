@@ -189,14 +189,14 @@ public:
         cout << "文件夹(" << folderNum << "): ";
         for (int i = 0; i < folderNum; i++)
         {
-            cout << folders[i].name << " ";
+            cout << i + 1 << "." << folders[i].name << " ";
         }
         cout << endl;
 
         cout << "文件(" << fileNum << "): ";
         for (int i = 0; i < fileNum; i++)
         {
-            cout << files[i].name
+            cout << i + 1 << "." << files[i].name
                  << "(" << files[i].id << ")"
                  << " ";
         }

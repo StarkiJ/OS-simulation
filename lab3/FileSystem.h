@@ -27,7 +27,7 @@ public:
     FileSystem(int sizeOfSpace, int sizeOfMemory, int blockSize)
     {
         password = "admin";
-        authority = 2;
+        authority = 1;
 
         this->blockSize = blockSize;
         numOfFiles = 0;
