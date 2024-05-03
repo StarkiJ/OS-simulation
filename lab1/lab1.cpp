@@ -232,8 +232,8 @@ void roundRobinScheduling(vector<Process> &processes, double timeSlice)
     while (completed < n)
     {
         if (!readyQueue.empty())
-        // 从就绪队列中取出进程
         {
+            // 从就绪队列中取出进程
             p = readyQueue.front();
             readyQueue.pop();
 
@@ -244,14 +244,12 @@ void roundRobinScheduling(vector<Process> &processes, double timeSlice)
             }
             cout << "time: " << time << "  \t进程 " << p.id << " 开始运行" << endl;
 
-            // 进程剩余时间大于时间片
-            if (p.remainTime > timeSlice)
+            if (p.remainTime > timeSlice) // 进程剩余时间大于时间片
             {
                 time += timeSlice;
                 p.remainTime -= timeSlice;
             }
-            // 进程将在此轮结束
-            else
+            else // 进程将在此轮结束
             {
                 time += p.remainTime;
                 p.remainTime = 0;
