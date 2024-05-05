@@ -474,7 +474,7 @@ public:
         cout << "创建文件成功：" << curPath << "/" << name << "(" << numOfFiles << ")  ";
         cout << ctime(&newFile.updatetime) << endl;
 
-        numOfFiles++;
+        numOfFiles++; // 历史文件数作为文件标识符
 
         return true;
     }
@@ -695,7 +695,7 @@ public:
             location = space[addr]; // 获取下一个外存块号
         }
 
-        tmpFile->size = size;
+        tmpFile->size = size; // 更新文件大小
 
         cout << "读文件成功：" << tmpFile->file->name << "(" << curFile->id << ")" << endl;
         showMemFile();

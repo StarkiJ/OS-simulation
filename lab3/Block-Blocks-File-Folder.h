@@ -76,7 +76,7 @@ public:
         }
 
         free.push_back(index);
-        if (blocks[index].used == size) // 如果不是这个文件的最后一个块
+        if (blocks[index].used == size) // 如果不是所属文件的最后一个块
         {
             blocks[index].used = 0;
             return false;
